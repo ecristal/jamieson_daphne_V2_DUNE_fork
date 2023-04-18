@@ -8,17 +8,25 @@ New for this firmware is a fully automatic front end. DAPHNE has 5 AFE chips, ea
 
 The output of the front end logic is 40 14-bit data buses synchronized to the master 62.5 MHz clock domain.
 
-### Core Logic
+### Self Triggered Core Logic
 
-The core logic contains the sender firmware. The senders take the raw AFE data (after it has been aligned to the master clock) and form output records. Output records are sent downstream to DAQ over high speed serial links. Two senders have been developed.
+The core logic contains the sender firmware. The senders take the raw AFE data (after it has been aligned to the master clock) and form output records. Output records are sent downstream to DAQ over high speed serial links. 
 
-#### Streaming
+#### Automatic Baseline Calculation
 
-The streaming sender design takes 4 AFE data streams and packs 64 samples from each stream them into an output frame for transmission to FELIX DAQ. The output link runs at 4.809 Gbps. This design runs continuously and there are a few idle words inserted between output frames. This version of the firmware has four streaming senders instantiated. The DEFAULT inputs to each sender are specified in the memory map section below. The sender input channel selection can be changed at any time by writing to registers via the Gigabit Ethernet interface.
+The self triggered sender is built upon a modular approach. The STC module monitors a single AFE data stream. Each STC module continuously monitors the data stream from an input channel. It automatically computes the average signal baseline level over 256 samples. The baseline level is reported in the output record header.
 
-#### Self-Triggered 
+#### Trigger Condition
 
-The self triggered sender is built upon a modular approach. The STC module monitors a single AFE data stream. It waits until a trigger condition is satisfied, then it grabs the 1024 samples (including 64 pre-trigger samples), forms an output frame around this data, and stores this frame in a FIFO. This FIFO is deep enough to store ~8.9 events. Then, on the backend, a state machine scans across N modules looking to see who has an output record ready to send in the FIFO. In a round robin manner these STC modules are selected to dump data to the output link to FELIX. And the process repeats. The current design has 10 input modules feeding one output, but can easily be changed to have any number of input modules feeding one output. This version of the firmware currently does not include any self-triggered senders.
+In this example code the trigger condition is defined simply as three consecutive samples > 10% over baseline. Once a trigger condition is satisfied, the STC module waits for 64 clock cycles, then grabs the next 1024 samples (including 64 pre-trigger samples), forms an output frame around this data, and stores this frame in a FIFO. This FIFO is deep enough to store ~8.9 events. 
+
+#### Re-trigger Capability
+
+Once the STC module is triggered it begins to capture the pre- and post- trigger samples. If during this time another trigger condition occurs, it is currently ignored, as it is assumed that this condition is going to be captured anyway. In a future version we may change this to support overlapping or re-trigger functionality.
+
+#### Backend Logic
+
+On the sender backend, a state machine scans across 10 modules looking to see who has an output record ready to send in the FIFO. In a round robin manner these STC modules are selected to dump data to the output link to FELIX. And the process repeats. The current design has 10 input modules feeding one output: channels 0-9 feed into output 0, channels 10-19 feed into output 1, and so on.
 
 ### Timing Endpoint
 
@@ -28,7 +36,7 @@ The timing endpoint firmware block interfaces to the DAPHNE timing input (optica
 
 #### Input Spy Buffers
 
-When triggered, the spy buffers will capture 64 pre-trigger samples followed by 4032 samples on EACH AFE channel. These buffers are memory mapped into the GBE internal address space and then can be read out at any time. The trigger may come from an external input to the DAPHNE2 board or by writing to a particular register in the GbE address space.
+When triggered, the spy buffers will capture 64 pre-trigger samples followed by 4032 samples on EACH AFE channel. These buffers are memory mapped into the GBE internal address space and then can be read out at any time. The trigger may come from an external input to the DAPHNE2 board or by writing to a particular register in the GbE address space. Note that the Spy Buffer trigger is totally separate from the trigger condition in the self-triggered core logic.
 
 #### Output Spy Buffers
 
@@ -115,31 +123,7 @@ The memory map is as follows:
 
 	0x00004002  Write anything to reset master clock MMCM1
 	0x00004003  Write anything to reset timing endpoint
-
-	The following registers are used to determine which physical input channels (numbered 0-39)
-	are connected to which streaming core sender inputs. There are four streaming core senders,
-	each with 4 inputs. These registers are write only. 
-
-	0x00005000  Sender0 input0 channel select, default = ch0 aka AFE0 input 0
-	0x00005001  Sender0 input1 channel select, default = ch1
-	0x00005002  Sender0 input2 channel select, default = ch2
-	0x00005003  Sender0 input3 channel select, default = ch3
-
-	0x00005010  Sender1 input0 channel select, default = ch8 aka AFE1 input 0
-	0x00005011  Sender1 input1 channel select, default = ch9
-	0x00005012  Sender1 input2 channel select, default = ch10
-	0x00005013  Sender1 input3 channel select, default = ch11
-
-	0x00005020  Sender2 input0 channel select, default = ch16 aka AFE2 input 0
-	0x00005021  Sender2 input1 channel select, default = ch17
-	0x00005022  Sender2 input2 channel select, default = ch18
-	0x00005023  Sender2 input3 channel select, default = ch19
-
-	0x00005030  Sender3 input0 channel select, default = ch24 aka AFE3 input 0
-	0x00005031  Sender3 input1 channel select, default = ch25
-	0x00005032  Sender3 input2 channel select, default = ch26
-	0x00005033  Sender3 input3 channel select, default = ch27
-				
+			
 	0x00009000  Read the FW version aka git commit hash ID, read-only, 28 bits
 
 	0x0000AA55  Test register R/O always returns 0xDEADBEEF, read-only, 32 bit
@@ -263,7 +247,7 @@ The DAPHNE2 board includes the CDR chip ADN2814CPZ U16. This device sends differ
 
 ### Gigabit Ethernet
 
-This firmware uses a Gigabit Ethernet Interface based on the OEI "Off the Shelf Ethernet Interface" developed by Ryan Rivera. This Ethernet interface is fiber and the SFP module connects to Quad 213, channel 0. The default IP address for this interface is 192.168.133.12.
+This firmware uses a Gigabit Ethernet Interface based on the OEI "Off the Shelf Ethernet Interface" developed by Ryan Rivera. This Ethernet interface is fiber and the SFP module connects to Quad 213, channel 0. The default IP address for this interface is 192.168.133.XX where XX is determined by the byte in EFUSE_USER[15..8].
 
 ### High Speed Serial Links
 
