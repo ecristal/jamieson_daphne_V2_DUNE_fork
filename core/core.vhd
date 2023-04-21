@@ -1,7 +1,18 @@
 -- core.vhd
--- DAPHNE2 core logic functions
--- four 4 channel streaming senders attached to Xilinx IP core 
--- with four GTP transceivers, TX only mode.
+-- DAPHNE2 core logic
+--
+-- This core logic supports BOTH the SELF-TRIGGERED and STREAMING mode senders.
+--
+-- Each streaming sender is connected to four channels. The ch_sel input determines which input
+-- channel is connected to which streaming sender.
+--
+-- Each self-triggered sender is "hard wired" to ten input channels. See the channel mapping below.
+--
+-- there are four output links which are controlled by the outmode bits. for example, link0 is controlled 
+-- by bits [1..0] like this:
+-- 0X = send idles
+-- 10 = streaming sender
+-- 11 = self-triggered sender
 --
 -- jamieson olsen <jamieson@fnal.gov>
 
@@ -17,13 +28,15 @@ port(
     reset: in std_logic; -- for sender logic and for GTP quad
     din: in array_5x9x14_type;  -- AFE data synch to mclk
     timestamp: in std_logic_vector(63 downto 0); -- sync to mclk
-    ch_sel: in array_4x4x6_type; -- choose which input channels are used
+
+    outmode: in std_logic_vector(7 downto 0); -- for each output link select streaming, self-trig, or disabled
+    ch_sel: in array_4x4x6_type; -- choose which input channels are used for streaming senders
+    threshold: in std_logic_vector(13 downto 0); -- for self-triggered mode, relative to average baseline
 
     slot_id: in std_logic_vector(3 downto 0);
     crate_id: in std_logic_vector(9 downto 0);
     detector_id: in std_logic_vector(5 downto 0);
     version_id: in std_logic_vector(5 downto 0);
-    enable: in std_logic_vector(3 downto 0);
 
     oeiclk: in std_logic;
     trig: in std_logic;
@@ -48,19 +61,35 @@ architecture core_arch of core is
     generic( link: std_logic_vector(5 downto 0) := "000000" );  
     port(
         reset: in std_logic;
-        enable: in std_logic;
-        slot_id: std_logic_vector(3 downto 0);
-        crate_id: std_logic_vector(9 downto 0);
-        detector_id: std_logic_vector(5 downto 0);
-        version_id: std_logic_vector(5 downto 0);
+        slot_id: in std_logic_vector(3 downto 0);
+        crate_id: in std_logic_vector(9 downto 0);
+        detector_id: in std_logic_vector(5 downto 0);
+        version_id: in std_logic_vector(5 downto 0);
         mclk: in std_logic; -- master clock 62.5 MHz
         timestamp: in std_logic_vector(63 downto 0);
     	afe_dat0, afe_dat1, afe_dat2, afe_dat3: in std_logic_vector(13 downto 0); -- four AFE ADC channels
-        ch0_id, ch1_id, ch2_id, ch3_id: in std_logic_vector(5 downto 0); -- the channel ID number
-       
+        ch0_id, ch1_id, ch2_id, ch3_id: in std_logic_vector(5 downto 0); -- the channel ID number       
         fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
         dout: out std_logic_vector(31 downto 0);
         kout: out std_logic_vector( 3 downto 0));
+    end component;
+
+    component st10_top -- 10 channel self-triggered sender
+    generic( link_id: std_logic_vector(5 downto 0)  := "000000" );
+    port(
+        reset: in std_logic;    
+        threshold: in std_logic_vector(13 downto 0); -- user defined threshold over baseline
+        slot_id: in std_logic_vector(3 downto 0);
+        crate_id: in std_logic_vector(9 downto 0);
+        detector_id: in std_logic_vector(5 downto 0);
+        version_id: in std_logic_vector(5 downto 0);
+        aclk: in std_logic; -- AFE clock 62.500 MHz
+        timestamp: in std_logic_vector(63 downto 0);
+    	afe_dat: in array_10x14_type;
+        fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
+        dout: out std_logic_vector(31 downto 0);
+        kout: out std_logic_vector(3 downto 0)
+    );
     end component;
 
     component spy
@@ -272,10 +301,19 @@ architecture core_arch of core is
     end component;
 
     signal fclk0, fclk1, fclk2, fclk3: std_logic;
-    signal sender0_dout, sender1_dout, sender2_dout, sender3_dout: std_logic_vector(31 downto 0);
-    signal sender0_kout, sender1_kout, sender2_kout, sender3_kout: std_logic_vector(3 downto 0);
-    signal trig_fclk_reg: std_logic;
+
+    signal st10_sender0_input, st10_sender1_input, st10_sender2_input, st10_sender3_input: array_10x14_type;
     signal ch_mux: array_4x4x14_type;
+
+    signal stream_sender0_dout, stream_sender1_dout, stream_sender2_dout, stream_sender3_dout:   std_logic_vector(31 downto 0);
+    signal selftrig_sender0_dout, selftrig_sender1_dout, selftrig_sender2_dout, selftrig_sender3_dout: std_logic_vector(31 downto 0);
+    signal sender0_dout, sender1_dout, sender2_dout, sender3_dout: std_logic_vector(31 downto 0);
+
+    signal stream_sender0_kout, stream_sender1_kout, stream_sender2_kout, stream_sender3_kout: std_logic_vector(3 downto 0);
+    signal selftrig_sender0_kout, selftrig_sender1_kout, selftrig_sender2_kout, selftrig_sender3_kout: std_logic_vector(3 downto 0);
+    signal sender0_kout, sender1_kout, sender2_kout, sender3_kout: std_logic_vector(3 downto 0);
+
+    signal trig_fclk_reg: std_logic;
 
 begin
     
@@ -328,11 +366,12 @@ begin
         end generate inputgen;
     end generate sendergen;
 
-    sender0_inst: dstr4 
+    -- instantiate four streaming senders
+
+    stream_sender0_inst: dstr4 
     generic map( link => "000000" )
     port map(
         reset => reset,
-        enable => enable(0),
         slot_id => slot_id,
         crate_id => crate_id,
         detector_id => detector_id,
@@ -348,15 +387,14 @@ begin
         ch2_id => ch_sel(0)(2),
         ch3_id => ch_sel(0)(3),
         fclk => fclk0,
-        dout => sender0_dout,
-        kout => sender0_kout
+        dout => stream_sender0_dout,
+        kout => stream_sender0_kout
     );
 
-    sender1_inst: dstr4 
+    stream_sender1_inst: dstr4 
     generic map( link => "000001" )
     port map(
         reset => reset,
-        enable => enable(1),
         slot_id => slot_id,
         crate_id => crate_id,
         detector_id => detector_id,
@@ -372,15 +410,14 @@ begin
         ch2_id => ch_sel(1)(2),
         ch3_id => ch_sel(1)(3),
         fclk => fclk1,
-        dout => sender1_dout,
-        kout => sender1_kout
+        dout => stream_sender1_dout,
+        kout => stream_sender1_kout
     );
 
-    sender2_inst: dstr4 
+    stream_sender2_inst: dstr4 
     generic map( link => "000010" )
     port map(
         reset => reset,
-        enable => enable(2),
         slot_id => slot_id,
         crate_id => crate_id,
         detector_id => detector_id,
@@ -396,15 +433,14 @@ begin
         ch2_id => ch_sel(2)(2),
         ch3_id => ch_sel(2)(3),
         fclk => fclk2,
-        dout => sender2_dout,
-        kout => sender2_kout
+        dout => stream_sender2_dout,
+        kout => stream_sender2_kout
     );
 
-    sender3_inst: dstr4 
+    stream_sender3_inst: dstr4 
     generic map( link => "000011" )
     port map(
         reset => reset,
-        enable => enable(3),
         slot_id => slot_id,
         crate_id => crate_id,
         detector_id => detector_id,
@@ -420,9 +456,162 @@ begin
         ch2_id => ch_sel(3)(2),
         ch3_id => ch_sel(3)(3),        
         fclk => fclk3,
-        dout => sender3_dout,
-        kout => sender3_kout
+        dout => stream_sender3_dout,
+        kout => stream_sender3_kout
     );
+  
+    -- unlike the streaming senders, the self triggered senders 
+    -- are "hard wired" to input channels. this mapping is defined here:
+
+    st10_sender0_input(0) <= din(0)(0); -- AFE0 channel 0
+    st10_sender0_input(1) <= din(0)(1);
+    st10_sender0_input(2) <= din(0)(2);
+    st10_sender0_input(3) <= din(0)(3);
+    st10_sender0_input(4) <= din(0)(4);
+    st10_sender0_input(5) <= din(0)(5);
+    st10_sender0_input(6) <= din(0)(6);
+    st10_sender0_input(7) <= din(0)(7);
+    st10_sender0_input(8) <= din(1)(0); -- AFE1 channel 0
+    st10_sender0_input(9) <= din(1)(1);
+
+    st10_sender1_input(0) <= din(1)(2); 
+    st10_sender1_input(1) <= din(1)(3);
+    st10_sender1_input(2) <= din(1)(4);
+    st10_sender1_input(3) <= din(1)(5);
+    st10_sender1_input(4) <= din(1)(6);
+    st10_sender1_input(5) <= din(1)(7);
+    st10_sender1_input(6) <= din(2)(0); -- AFE2 channel 0
+    st10_sender1_input(7) <= din(2)(1);
+    st10_sender1_input(8) <= din(2)(2);
+    st10_sender1_input(9) <= din(2)(3);
+
+    st10_sender2_input(0) <= din(2)(4); 
+    st10_sender2_input(1) <= din(2)(5);
+    st10_sender2_input(2) <= din(2)(6);
+    st10_sender2_input(3) <= din(2)(7);
+    st10_sender2_input(4) <= din(3)(0); -- AFE3 channel 0
+    st10_sender2_input(5) <= din(3)(1);
+    st10_sender2_input(6) <= din(3)(2);
+    st10_sender2_input(7) <= din(3)(3);
+    st10_sender2_input(8) <= din(3)(4);
+    st10_sender2_input(9) <= din(3)(5);
+
+    st10_sender3_input(0) <= din(3)(6);
+    st10_sender3_input(1) <= din(3)(7);
+    st10_sender3_input(2) <= din(4)(0); -- AFE4 channel 0
+    st10_sender3_input(3) <= din(4)(1);
+    st10_sender3_input(4) <= din(4)(2);
+    st10_sender3_input(5) <= din(4)(3);
+    st10_sender3_input(6) <= din(4)(4);
+    st10_sender3_input(7) <= din(4)(5);
+    st10_sender3_input(8) <= din(4)(6);
+    st10_sender3_input(9) <= din(4)(7);
+
+    -- instantiate four 10-input self-triggered senders
+    -- these senders are always present and active
+
+    st10_sender0_inst: st10_top 
+    generic map( link_id => "000000" )
+    port map(
+        reset => reset,
+        threshold => threshold,
+        slot_id => slot_id,
+        crate_id => crate_id,
+        detector_id => detector_id,
+        version_id => version_id,
+        aclk => mclk,
+        timestamp => timestamp,
+    	afe_dat => st10_sender0_input,
+        fclk => fclk0,
+        dout => selftrig_sender0_dout,
+        kout => selftrig_sender0_kout
+    );
+
+    st10_sender1_inst: st10_top 
+    generic map( link_id => "000001" )
+    port map(
+        reset => reset,
+        threshold => threshold,
+        slot_id => slot_id,
+        crate_id => crate_id,
+        detector_id => detector_id,
+        version_id => version_id,
+        aclk => mclk,
+        timestamp => timestamp,
+    	afe_dat => st10_sender1_input,
+        fclk => fclk1,
+        dout => selftrig_sender1_dout,
+        kout => selftrig_sender1_kout
+    );
+
+    st10_sender2_inst: st10_top 
+    generic map( link_id => "000010" )
+    port map(
+        reset => reset,
+        threshold => threshold,
+        slot_id => slot_id,
+        crate_id => crate_id,
+        detector_id => detector_id,
+        version_id => version_id,
+        aclk => mclk,
+        timestamp => timestamp,
+    	afe_dat => st10_sender2_input,
+        fclk => fclk2,
+        dout => selftrig_sender2_dout,
+        kout => selftrig_sender2_kout
+    );
+
+    st10_sender3_inst: st10_top 
+    generic map( link_id => "000011" )
+    port map(
+        reset => reset,
+        threshold => threshold,
+        slot_id => slot_id,
+        crate_id => crate_id,
+        detector_id => detector_id,
+        version_id => version_id,
+        aclk => mclk,
+        timestamp => timestamp,
+    	afe_dat => st10_sender3_input,
+        fclk => fclk3,
+        dout => selftrig_sender3_dout,
+        kout => selftrig_sender3_kout
+    );
+
+    -- a mux determines whether the streaming sender or the self triggered sender
+    -- is connected to each output. this mux is controlled by the outmode bits
+
+    sender0_kout <= stream_sender0_kout   when (outmode(1 downto 0)="10") else 
+                    selftrig_sender0_kout when (outmode(1 downto 0)="11") else 
+                    "0001"; -- idle word
+
+    sender1_kout <= stream_sender1_kout   when (outmode(3 downto 2)="10") else 
+                    selftrig_sender1_kout when (outmode(3 downto 2)="11") else 
+                    "0001";
+
+    sender2_kout <= stream_sender2_kout   when (outmode(5 downto 4)="10") else 
+                    selftrig_sender2_kout when (outmode(5 downto 4)="11") else 
+                    "0001";
+
+    sender3_kout <= stream_sender3_kout   when (outmode(7 downto 6)="10") else 
+                    selftrig_sender3_kout when (outmode(7 downto 6)="11") else 
+                    "0001";
+
+    sender0_dout <= stream_sender0_dout   when (outmode(1 downto 0)="10") else 
+                    selftrig_sender0_dout when (outmode(1 downto 0)="11") else 
+                    X"000000BC";
+
+    sender1_dout <= stream_sender1_dout   when (outmode(3 downto 2)="10") else 
+                    selftrig_sender1_dout when (outmode(3 downto 2)="11") else 
+                    X"000000BC";
+
+    sender2_dout <= stream_sender2_dout   when (outmode(5 downto 4)="10") else 
+                    selftrig_sender2_dout when (outmode(5 downto 4)="11") else 
+                    X"000000BC";
+
+    sender3_dout <= stream_sender3_dout   when (outmode(7 downto 6)="10") else 
+                    selftrig_sender3_dout when (outmode(7 downto 6)="11") else 
+                    X"000000BC";
 
     -- the trigger input to this module comes from the mclk clock domain
     -- and the pulse is guaranteed to be several mclk cycles wide.

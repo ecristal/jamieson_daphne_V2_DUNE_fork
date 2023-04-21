@@ -1,11 +1,11 @@
 -- stc.vhd
 -- self triggered channel machine for ONE DAPHNE channel
 -- 
--- watches one channel data bus, waits for trigger condition, then begins assemblying the output frame
--- in a FIFO. stores 64 pre trigger samples plus + post trigger samples, densely packed. a single 32x1024 
--- FIFO can store up to 8 events.  
--- 
--- trigger condition = 1 sample above threshold followed by 3 consecutive samples below threshold 
+-- This module watches one channel data bus and computes the average signal level 
+-- (baseline.vhd) based on the last 256 samples. When it detects a trigger condition
+-- (defined in trig.vhd) it then begins assemblying the output frame in a FIFO. 
+-- It stores 64 pre trigger samples plus + post trigger samples, densely packed. 
+-- a single 32x1024 FIFO can store nearly 9 output records.
 -- 
 -- Jamieson Olsen <jamieson@fnal.gov>
 
@@ -28,7 +28,7 @@ port(
     crate_id: std_logic_vector(9 downto 0);
     detector_id: std_logic_vector(5 downto 0);
     version_id: std_logic_vector(5 downto 0);
-    threshold: std_logic_vector(13 downto 0);
+    threshold: std_logic_vector(13 downto 0); -- trig threshold relative to calculated baseline
      
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
@@ -44,7 +44,7 @@ end stc;
 
 architecture stc_arch of stc is
 
-    signal afe_dat_i, afe_dly: std_logic_vector(13 downto 0);
+    signal afe_dly32_i, afe_dly64_i, afe_dly96_i, afe_dly: std_logic_vector(13 downto 0);
     signal afe_dly0, afe_dly1, afe_dly2: std_logic_vector(13 downto 0);
     signal block_count: std_logic_vector(5 downto 0);
 
@@ -66,23 +66,34 @@ architecture stc_arch of stc is
     type array_4x8_type is array(3 downto 0) of std_logic_vector(7 downto 0);
     signal DIP, DOP: array_4x8_type;
 
-    component CRC_OL is
-       generic( Nbits: positive := 32; CRC_Width: positive := 20;
-                G_Poly: std_logic_vector := X"8359f"; G_InitVal: std_logic_vector := X"fffff" );
-       port(
-         CRC   : out    std_logic_vector(CRC_Width-1 downto 0);
-         Calc  : in     std_logic;
-         Clk   : in     std_logic;
-         DIn   : in     std_logic_vector(Nbits-1 downto 0);
-         Reset : in     std_logic);
+    signal baseline: std_logic_vector(13 downto 0);
+
+    component baseline256 is -- establish average signal level
+    port(
+        clock: in std_logic;
+        reset: in std_logic;
+        din: in std_logic_vector(13 downto 0);
+        baseline: out std_logic_vector(13 downto 0));
     end component;
-	
-    component trig is -- the self trigger algorithm broken out in a separate component...
-       port(
-         clock: in std_logic;
-         din: in std_logic_vector(13 downto 0);
-         threshold: std_logic_vector(13 downto 0);
-         triggered: out std_logic);
+
+    component trig is -- example trigger algorithm broken out separately, latency = 64 clocks
+    port(
+        clock: in std_logic;
+        din: in std_logic_vector(13 downto 0);
+        baseline: in std_logic_vector(13 downto 0);
+        threshold: in std_logic_vector(13 downto 0);
+        triggered: out std_logic);
+    end component;
+
+    component CRC_OL is
+    generic( Nbits: positive := 32; CRC_Width: positive := 20;
+             G_Poly: std_logic_vector := X"8359f"; G_InitVal: std_logic_vector := X"fffff" );
+    port(
+        CRC: out std_logic_vector(CRC_Width-1 downto 0);
+        Calc: in std_logic;
+        Clk: in std_logic;
+        DIn: in std_logic_vector(Nbits-1 downto 0);
+        Reset: in std_logic);
     end component;
 
     signal crc_calc, crc_reset, triggered: std_logic;
@@ -90,7 +101,8 @@ architecture stc_arch of stc is
 
 begin
 
-    -- delay input data by 64 clocks for capturing pre-trigger data, this is fixed
+    -- delay input data by 128 clocks to compensate for 64 clock trigger latency 
+    -- and also for capturing 64 pre-trigger samples
 
     gendelay: for i in 13 downto 0 generate
 
@@ -101,7 +113,7 @@ begin
             a => "11111",
             d => afe_dat(i), -- real time AFE data
             q => open,
-            q31 => afe_dat_i(i)  
+            q31 => afe_dly32_i(i) -- AFE data 32 clocks ago 
         );
     
         srlc32e_1_inst : srlc32e
@@ -109,12 +121,42 @@ begin
             clk => aclk,
             ce => '1',
             a => "11111",
-            d => afe_dat_i(i),
-            q => afe_dly(i), -- this is the AFE data 64 clock cycles ago
-            q31 => open  
+            d => afe_dly32_i(i),
+            q => open,
+            q31 => afe_dly64_i(i) -- AFE data 64 clocks ago
+        );
+
+        srlc32e_2_inst : srlc32e
+        port map(
+            clk => aclk,
+            ce => '1',
+            a => "11111",
+            d => afe_dly64_i(i),
+            q => open,
+            q31 => afe_dly96_i(i) -- AFE data 96 clocks ago
+        );
+
+        srlc32e_3_inst : srlc32e
+        port map(
+            clk => aclk,
+            ce => '1',
+            a => "11111",
+            d => afe_dly96_i(i),
+            q => open,
+            q31 => afe_dly(i) -- AFE data 128 clocks ago
         );
 
     end generate gendelay;
+
+    -- compute the average signal baseline level over the last 256 samples
+
+    baseline_inst: baseline256
+    port map(
+        clock => aclk,
+        reset => reset,
+        din => afe_dat, -- watching live AFE data
+        baseline => baseline
+    );
 
     -- now for dense data packing, we need to access up to last 4 samples at once...
 
@@ -127,12 +169,13 @@ begin
         end if;
     end process pack_proc;       
 
-    -- trigger module watches the live (not delayed) data...
+    -- trigger algorithm in a separate module. this latency is assumed to be 64 cycles
 
     trig_inst: trig
     port map(
          clock => aclk,
-         din => afe_dat,
+         din => afe_dat, -- watching live AFE data
+         baseline => baseline,
          threshold => threshold,
          triggered => triggered
     );        

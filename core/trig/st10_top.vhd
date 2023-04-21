@@ -11,18 +11,18 @@ use ieee.numeric_std.all;
 library unisim;
 use unisim.vcomponents.all;
 
-use work.daphne_package.all;
+use work.daphne2_package.all;
 
 entity st10_top is
 generic( link_id: std_logic_vector(5 downto 0)  := "000000" );
 port(
     reset: in std_logic;
 
-    threshold: std_logic_vector(13 downto 0);
-    slot_id: std_logic_vector(3 downto 0);
-    crate_id: std_logic_vector(9 downto 0);
-    detector_id:   std_logic_vector(5 downto 0);
-    version_id:  std_logic_vector(5 downto 0);
+    threshold: in std_logic_vector(13 downto 0); -- user defined threshold over baseline
+    slot_id: in std_logic_vector(3 downto 0);
+    crate_id: in std_logic_vector(9 downto 0);
+    detector_id: in std_logic_vector(5 downto 0);
+    version_id: in std_logic_vector(5 downto 0);
 
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
@@ -50,8 +50,8 @@ architecture st10_top_arch of st10_top is
     signal fifo_do: array_10x32_type;
     signal fifo_ko: array_10x4_type;
 
-    signal d: std_logic_vector(31 downto 0);
-    signal k: std_logic_vector( 3 downto 0);
+    signal d, dout_reg: std_logic_vector(31 downto 0);
+    signal k, kout_reg: std_logic_vector( 3 downto 0);
 
     component stc is
     generic( link_id: std_logic_vector(5 downto 0) := "000000";
@@ -208,7 +208,17 @@ begin
          fifo_ko(9) when (sel_reg="1001" and state=dump) else
          "0001"; -- idle word
 
-    dout <= d;
-    kout <= k;
+    -- register the outputs
+
+    outreg_proc: process(fclk)
+    begin
+        if rising_edge(fclk) then
+            dout_reg <= d;
+            kout_reg <= k;
+        end if;
+    end process outreg_proc;
+
+    dout <= dout_reg;
+    kout <= kout_reg;
 
 end st10_top_arch;

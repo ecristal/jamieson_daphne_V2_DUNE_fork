@@ -29,6 +29,7 @@ package daphne2_package is
     type array_8x14_type is array (7 downto 0) of std_logic_vector(13 downto 0);
     type array_9x14_type is array (8 downto 0) of std_logic_vector(13 downto 0);
     type array_9x16_type is array (8 downto 0) of std_logic_vector(15 downto 0);
+    type array_10x14_type is array (9 downto 0) of std_logic_vector(13 downto 0);
 
     type array_4x4x6_type is array (3 downto 0) of array_4x6_type;
     type array_4x4x14_type is array (3 downto 0) of array_4x14_type;
@@ -64,11 +65,16 @@ package daphne2_package is
 
     constant DAQ_OUT_PARAM_ADDR: std_logic_vector(31 downto 0) := X"00003000";
 
-    constant DEFAULT_DAQ_OUT_LINK_ENABLE: std_logic_vector(3 downto 0) := "1111";
     constant DEFAULT_DAQ_OUT_SLOT_ID:     std_logic_vector(3 downto 0) := "0010";
     constant DEFAULT_DAQ_OUT_CRATE_ID:    std_logic_vector(9 downto 0) := "0000000001";
     constant DEFAULT_DAQ_OUT_DETECTOR_ID: std_logic_vector(5 downto 0) := "000010";
     constant DEFAULT_DAQ_OUT_VERSION_ID:  std_logic_vector(5 downto 0) := "000001";
+
+    -- DAQ output link mode selection register
+
+    constant DAQ_OUTMODE_BASEADDR: std_logic_vector(31 downto 0) := X"00003001";
+
+    constant DEFAULT_DAQ_OUTMODE: std_logic_vector(7 downto 0) := X"00";
 
     -- master clock and timing endpoint status register
 
@@ -91,6 +97,12 @@ package daphne2_package is
     -- next register is sender0 input 1, ... up to sender3 input3.
 
     constant CORE_SENDER_INMUX_BASEADDR: std_logic_vector(31 downto 0) := X"00005000";
+
+    -- address of the threshold register for the self trig senders
+
+    constant THRESHOLD_BASEADDR: std_logic_vector(31 downto 0) := X"00006000";
+
+    constant DEFAULT_THRESHOLD: std_logic_vector(13 downto 0) := "00000100000000";
 
     -- spy buffers are 4k deep
 

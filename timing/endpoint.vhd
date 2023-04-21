@@ -37,6 +37,7 @@ port(
     -- timing endpoint interface 
 
     ep_reset: in std_logic; -- soft reset endpoint logic
+    ep_addr: in std_logic_vector(15 downto 0); -- endpoint address
     ep_ts_rdy: out std_logic; -- endpoint timestamp is good
     ep_stat: out std_logic_vector(3 downto 0); -- endpoint state bits
 
@@ -65,6 +66,7 @@ component pdts_endpoint_wrapper is -- wrapped and cleaned up for DAPHNE V2a desi
 		sys_clk: in std_logic; -- System clock is 100MHz
 		sys_rst: in std_logic; -- System reset (sclk domain)
 		sys_stat: out std_logic_vector(3 downto 0); -- Status output (sclk domain)
+        sys_addr: in std_logic_vector(15 downto 0);
 		los: in std_logic := '0'; -- External signal path status (async)
 		rxd: in std_logic; -- Timing input (clk domain)
 		txd: out std_logic; -- Timing output (clk domain)
@@ -185,6 +187,7 @@ pdts_endpoint_inst: pdts_endpoint_wrapper
 		sys_clk => sclk100_i, -- 100MHz from MMCM0
 		sys_rst => ep_reset,
 		sys_stat => ep_stat,
+        sys_addr => ep_addr,
 		los => cdr_sfp_los,
 		rxd => adn2814_data, -- NEW: get the modulated clock from the external CDR DATA output
 		txd => cdr_sfp_txd, 

@@ -24,11 +24,11 @@ generic(
 port(
     reset: in std_logic;
 
-    slot_id: std_logic_vector(3 downto 0) := "0000";
-    crate_id: std_logic_vector(9 downto 0) := "0000000000";
-    detector_id: std_logic_vector(5 downto 0) := "000000";
-    version_id: std_logic_vector(5 downto 0) := "100000";
-    threshold: std_logic_vector(13 downto 0) := "00000000100000";
+    slot_id: std_logic_vector(3 downto 0);
+    crate_id: std_logic_vector(9 downto 0);
+    detector_id: std_logic_vector(5 downto 0);
+    version_id: std_logic_vector(5 downto 0);
+    threshold: std_logic_vector(13 downto 0);
 
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
@@ -48,6 +48,8 @@ signal timestamp: std_logic_vector(63 downto 0) := X"0000000000000000";
 signal afe_dat: std_logic_vector(13 downto 0) := "00000001000000";
 signal fclk: std_logic := '0';
 
+constant threshold: std_logic_vector(13 downto 0) := "00000100000000";
+
 begin
 
 aclk <= not aclk after 8.000 ns; --  62.500 MHz
@@ -61,21 +63,40 @@ begin
     timestamp <= std_logic_vector(unsigned(timestamp) + 1);
 end process ts_proc;
 
-pulse_proc: process 
+waveform_proc: process
 begin 
+
+    -- establish baseline level mid scale ish
+
+    afe_dat <= "10000000000000";
     wait for 1000ns;
+    afe_dat <= "10000000000011";
+    wait for 1000ns;
+    afe_dat <= "10000000000001";
+    wait for 1000ns;
+    afe_dat <= "10000000000111";
+    wait for 1000ns;
+    afe_dat <= "10000000001111";
+    wait for 1000ns;
+
+    -- here's the fast pulse
+
     wait until falling_edge(aclk);
-    afe_dat <= "00000000000001";
+    afe_dat <= "11111011100001";
     wait until falling_edge(aclk);
-    afe_dat <= "00000000000010";
+    afe_dat <= "11111010110111";
     wait until falling_edge(aclk);
-    afe_dat <= "00000000000011";
+    afe_dat <= "11111101011011";
     wait until falling_edge(aclk);
-    afe_dat <= "00000000000100";
+    afe_dat <= "10000001110101";
+
+    -- return to baseline level 
+
     wait until falling_edge(aclk);
-    afe_dat <= "00011000000000";
+    afe_dat <= "10000000000000";
     wait;
-end process pulse_proc;
+
+end process waveform_proc;
 
 DUT: stc
 generic map(
@@ -84,11 +105,11 @@ generic map(
 port map(
     reset => reset,
 
-    threshold => "00000000100000",
     slot_id => "0000",
     crate_id => "0000000000",
     detector_id => "000000",
     version_id => "100000",
+    threshold => threshold, -- abs trigger level = 256 counts over baseline
 
     aclk => aclk,
     timestamp => timestamp,

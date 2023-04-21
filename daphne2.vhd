@@ -3,8 +3,8 @@
 -- Target: XC7A200T-2FBG676C
 -- PCB version: DAPHNE V2A (this adds four general output links, one dedicated GbE link, separate
 -- MGT refclocks for DAQ links (120.237MHz) and GbE (125MHz). 
--- Features: Automatic AFE data alignment, OEI GbE interface, Spy buffers, 4 outputs to DAQ
--- Note this version does not have the timing endpoint firmware -- local clocks only with fake timestamp
+-- Features: Automatic AFE data alignment, OEI GbE interface, Spy buffers, 4 outputs to DAQ, streaming and self trig
+-- senders, new timing endpoint logic, efuse.
 --
 -- Jamieson Olsen <jamieson@fnal.gov>
 
@@ -142,6 +142,7 @@ architecture DAPHNE2_arch of DAPHNE2 is
 	    --ep_tgrp: in std_logic_vector(1 downto 0); -- Timing group (async, sampled in clk domain)
         ep_ts_rdy: out std_logic; -- endpoint timestamp is good
         ep_stat: out std_logic_vector(3 downto 0); -- endpoint state bits
+        ep_addr: in std_logic_vector(15 downto 0); 
         mmcm1_reset: in std_logic;
         mmcm1_locked: out std_logic;
         mmcm0_locked: out std_logic;
@@ -287,12 +288,13 @@ architecture DAPHNE2_arch of DAPHNE2 is
         reset: in std_logic; -- for sender logic and for GTP quad
         din: in array_5x9x14_type;  -- AFE data synchronized to clock
         timestamp: in std_logic_vector(63 downto 0);
-        ch_sel: in array_4x4x6_type; -- choose which input channels are used
+        ch_sel: in array_4x4x6_type; -- choose which input channels are used for streaming senders
         slot_id: in std_logic_vector(3 downto 0);
         crate_id: in std_logic_vector(9 downto 0);
         detector_id: in std_logic_vector(5 downto 0);
         version_id: in std_logic_vector(5 downto 0);
-        enable: in std_logic_vector(3 downto 0);
+        outmode: in std_logic_vector(7 downto 0); -- choose streaming or self-trig sender for each output
+        threshold: in std_logic_vector(13 downto 0); -- for self-trig senders, threshold relative to average baseline
         oeiclk: in std_logic;
         trig: in std_logic;
         spy_addr: in std_logic_vector(11 downto 0);
@@ -353,13 +355,14 @@ architecture DAPHNE2_arch of DAPHNE2 is
     signal errcnt: array_5x8_type;
     signal sfp_stat_vector: std_logic_vector(63 downto 0);
 
-    signal daq_out_param_reg: std_logic_vector(29 downto 0) := (DEFAULT_DAQ_OUT_LINK_ENABLE & DEFAULT_DAQ_OUT_SLOT_ID & DEFAULT_DAQ_OUT_CRATE_ID & DEFAULT_DAQ_OUT_DETECTOR_ID & DEFAULT_DAQ_OUT_VERSION_ID);
+    signal daq_out_param_reg: std_logic_vector(25 downto 0) := (DEFAULT_DAQ_OUT_SLOT_ID & DEFAULT_DAQ_OUT_CRATE_ID & DEFAULT_DAQ_OUT_DETECTOR_ID & DEFAULT_DAQ_OUT_VERSION_ID);
     signal daq_out_param_we:  std_logic;
 
     signal mclk_ctrl_reg: std_logic_vector(15 downto 0) := (others=>'0');
     signal mclk_stat_reg: std_logic_vector(12 downto 0);
     signal use_ep, ep_ts_rdy: std_logic;
     signal ep_stat: std_logic_vector(3 downto 0);
+    signal ep_addr: std_logic_vector(15 downto 0);
     signal mmcm1_locked, mmcm0_locked: std_logic;
     signal mclk_ctrl_reg_we: std_logic;
 
@@ -367,6 +370,12 @@ architecture DAPHNE2_arch of DAPHNE2 is
     signal spi_res_fifo_data: std_logic_vector(7 downto 0);
 
     signal ch_sel_reg: array_4x4x6_type; -- choose which input channels are used for core inputs
+
+    signal outmode_reg: std_logic_vector(7 downto 0);
+    signal outmode_we: std_logic;
+
+    signal threshold_reg : std_logic_vector(13 downto 0);
+    signal threshold_we: std_logic;
 
 begin
 
@@ -406,6 +415,11 @@ begin
         adn2814_lol & adn2814_los & 
         "00" & mmcm1_locked & mmcm0_locked;
 
+    -- each endpoint in the system needs to have a unique address
+    -- set this to 0x000F + EFUSE
+
+    ep_addr <= std_logic_vector( unsigned(X"000F") + unsigned(EFUSEUSR(15 downto 8)) );
+
     -- main clock distribution includes timing endpoint logic
     -- there are two cascaded MMCMs with separate LOCKED status bits
 
@@ -431,7 +445,7 @@ begin
 
         ep_reset => reset_ep,
         --ep_edgesel => mclk_ctrl_reg(1),
-        --ep_addr => mclk_ctrl_reg(15 downto 8),
+        ep_addr => ep_addr,
 	    --ep_tgrp => mclk_ctrl_reg(5 downto 4),
         ep_ts_rdy => ep_ts_rdy,
         ep_stat => ep_stat,
@@ -717,12 +731,15 @@ begin
 
                (X"00000000" & core_spy_data) when std_match(rx_addr_reg, SPYBUFDOUT0_BASEADDR) else 
 
-               (X"00000000" & "00" & daq_out_param_reg) when std_match(rx_addr_reg, DAQ_OUT_PARAM_ADDR) else 
+               (X"00000000" & "000000" & daq_out_param_reg) when std_match(rx_addr_reg, DAQ_OUT_PARAM_ADDR) else -- 26 bits
 
                (X"000000000000" & "000" & mclk_stat_reg) when std_match(rx_addr_reg, MCLK_STAT_ADDR) else
                (X"000000000000" & mclk_ctrl_reg) when std_match(rx_addr_reg, MCLK_CTRL_ADDR) else 
 
                (X"00000000000000" & spi_res_fifo_data) when std_match(rx_addr_reg, SPI_FIFO_ADDR) else 
+
+               (X"000000000000" & "00" & threshold_reg(13 downto 0)) when std_match(rx_addr_reg, THRESHOLD_BASEADDR) else 
+               (X"00000000000000" & outmode_reg(7 downto 0)) when std_match(rx_addr_reg, DAQ_OUTMODE_BASEADDR) else 
 
                (others=>'0');
 
@@ -835,7 +852,7 @@ begin
     daq3_sfp_sda <= 'Z';
 
     -- register for storing quasi-static output record parameters, R/W via GbE
-    -- output_link_enable(3..0) & slot_id(3..0) & crate_id(9..0) & detector_id(5..0) & version_id(5..0)
+    -- slot_id(3..0) & crate_id(9..0) & detector_id(5..0) & version_id(5..0)
 
     daq_out_param_we <= '1' when (std_match(rx_addr,DAQ_OUT_PARAM_ADDR) and rx_wren='1') else '0';
 
@@ -843,12 +860,49 @@ begin
     begin
         if rising_edge(oeiclk) then
             if (reset_async='1') then
-                daq_out_param_reg <= (DEFAULT_DAQ_OUT_LINK_ENABLE & DEFAULT_DAQ_OUT_SLOT_ID & DEFAULT_DAQ_OUT_CRATE_ID & DEFAULT_DAQ_OUT_DETECTOR_ID & DEFAULT_DAQ_OUT_VERSION_ID);
+                daq_out_param_reg <= (DEFAULT_DAQ_OUT_SLOT_ID & DEFAULT_DAQ_OUT_CRATE_ID & DEFAULT_DAQ_OUT_DETECTOR_ID & DEFAULT_DAQ_OUT_VERSION_ID);
             elsif (daq_out_param_we='1') then
-                daq_out_param_reg <= rx_data(29 downto 0);
+                daq_out_param_reg <= rx_data(25 downto 0);
             end if;
         end if;
     end process misc_outlink_stuff_proc;
+
+    -- register for controlling daq output link mode (idle, streaming, selftrig)
+    -- outmode is 8 bits, R/W from GBE
+
+    outmode_we <= '1' when (std_match(rx_addr,DAQ_OUTMODE_BASEADDR) and rx_wren='1') else '0';
+
+    outmode_proc: process(oeiclk)
+    begin
+        if rising_edge(oeiclk) then
+            if (reset_async='1') then
+                outmode_reg <= DEFAULT_DAQ_OUTMODE;
+            elsif (outmode_we='1') then
+                outmode_reg <= rx_data(7 downto 0);
+            end if;
+        end if;
+    end process outmode_proc;
+
+    -- register for setting threshold (relative to avg baseline) for self triggered senders
+    -- register is 14 bits, R/W from GBE
+
+    threshold_we <= '1' when (std_match(rx_addr,THRESHOLD_BASEADDR) and rx_wren='1') else '0';
+
+    thresh_proc: process(oeiclk)
+    begin
+        if rising_edge(oeiclk) then
+            if (reset_async='1') then
+                threshold_reg <= DEFAULT_THRESHOLD;
+            elsif (threshold_we='1') then
+                threshold_reg <= rx_data(13 downto 0);
+            end if;
+        end if;
+    end process thresh_proc;
+
+
+
+
+
 
     -- There are four senders in the streaming core, each sender has four input channels. 
     -- The following registers specify which input channel (0-39) is connected to each sender.
@@ -872,7 +926,7 @@ begin
         end generate CoreInGen;
     end generate SenderGen;
 
-    -- Streaming core, 4 sender modules, one per output link.
+    -- combo core logic, streaming and self-trig
 
     core_inst: core
     port map(
@@ -882,8 +936,9 @@ begin
         din => afe_dout,
         timestamp => timestamp,
         ch_sel => ch_sel_reg,
+        outmode => outmode_reg,
+        threshold => threshold_reg,
 
-        enable => daq_out_param_reg(29 downto 26),  -- 4 bits
         slot_id => daq_out_param_reg(25 downto 22),  -- 4 bits
         crate_id => daq_out_param_reg(21 downto 12), -- 10 bits
         detector_id => daq_out_param_reg(11 downto 6), -- 6 bits

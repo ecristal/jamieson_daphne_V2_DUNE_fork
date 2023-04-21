@@ -8,7 +8,7 @@ New for this firmware is a fully automatic front end. DAPHNE has 5 AFE chips, ea
 
 The output of the front end logic is 40 14-bit data buses synchronized to the master 62.5 MHz clock domain.
 
-### Self Triggered Core Logic
+### Self Triggered Sender
 
 The core logic contains the sender firmware. The senders take the raw AFE data (after it has been aligned to the master clock) and form output records. Output records are sent downstream to DAQ over high speed serial links. 
 
@@ -18,7 +18,7 @@ The self triggered sender is built upon a modular approach. The STC module monit
 
 #### Trigger Condition
 
-In this example code the trigger condition is defined simply as three consecutive samples > 10% over baseline. Once a trigger condition is satisfied, the STC module waits for 64 clock cycles, then grabs the next 1024 samples (including 64 pre-trigger samples), forms an output frame around this data, and stores this frame in a FIFO. This FIFO is deep enough to store ~8.9 events. 
+In this example code the user supplies the threshold value, which is relative to the automatic baseline. Thus the trigger condition is defined simply as three consecutive samples over (baseline + threshold). Once a trigger condition is satisfied, the STC module waits for 64 clock cycles, then grabs the next 1024 samples (including 64 pre-trigger samples), forms an output frame around this data, and stores this frame in a FIFO. This FIFO is deep enough to store ~8.9 events. 
 
 #### Re-trigger Capability
 
@@ -28,9 +28,15 @@ Once the STC module is triggered it begins to capture the pre- and post- trigger
 
 On the sender backend, a state machine scans across 10 modules looking to see who has an output record ready to send in the FIFO. In a round robin manner these STC modules are selected to dump data to the output link to FELIX. And the process repeats. The current design has 10 input modules feeding one output: channels 0-9 feed into output 0, channels 10-19 feed into output 1, and so on.
 
+### Streaming Sender 
+
+The streaming sender design takes 4 AFE data streams and packs 64 samples from each stream them into an output frame for transmission to FELIX DAQ. The output link runs at 4.809 Gbps. This design runs continuously and there are a few idle words inserted between output frames. This version of the firmware has four streaming senders instantiated. The DEFAULT inputs to each sender are specified in the memory map section below. The sender input channel selection can be changed at any time by writing to registers via the Gigabit Ethernet interface.
+
 ### Timing Endpoint
 
-The timing endpoint firmware block interfaces to the DAPHNE timing input (optical link) and generates the master 62.5 MHz clock and a 64 bit timestamp. The timing endpoint design used here is the NEW style timing protocol based on pulse width modulated clock at 62.5MHz. An external ADN2814 clock and data recovery chip is present, but this new timing scheme no longer requires it. The AD2814 clock output is not used by the new timing endpoint logic, and the DATAOUT signal is the encoded clock. The "pdts" endpoint logic was developed by Dave Newbold and others at Bristol UK and adapted to DAPHNE by Adrian @ UPENN. Through the GbE interface the user can monitor all status bits related to the timing endpoint and control status bits as well. The most important control bit selects either the local clocks (with fake timestamp) or timing endpoint to run the FPGA. The default endpoint address is 0x000F.
+The timing endpoint firmware block interfaces to the DAPHNE timing input (optical link) and generates the master 62.5 MHz clock and a 64 bit timestamp. The timing endpoint design used here is the NEW style timing protocol based on pulse width modulated clock at 62.5MHz. An external ADN2814 clock and data recovery chip is present, but this new timing scheme no longer requires it. The AD2814 clock output is not used by the new timing endpoint logic, and the DATAOUT signal is the encoded clock. The "pdts" endpoint logic was developed by Dave Newbold and others at Bristol UK and adapted to DAPHNE by Adrian @ UPENN. Through the GbE interface the user can monitor all status bits related to the timing endpoint and control status bits as well. The most important control bit selects either the local clocks (with fake timestamp) or timing endpoint to run the FPGA. 
+
+The default timing endpoint address is a 16 bit unsigned number. It is determined by reading the EFUSE_USER bits [15..8] and adding 0x000F to it.
 
 ### Spy Buffers
 
@@ -44,7 +50,9 @@ Output spy buffers capture the data that the core is sending on the DAQ0 output 
 
 ### Gigabit Ethernet (GbE)
 
-The GbE interface is a simple way to access FPGA internal registers and memory buffers from a PC. The GbE interface is always active, but is not required for operation. This interface is intended for debugging and provides fast access to various spy buffers and registers. This interface is based on the "off the shelf Ethernet Interface" developed at Fermilab by Ryan Rivera and Lorenzo Uplegger. The default IP address is 192.168.133.XX and the MAC is 00:80:55:DE:00:XX where XX is EFUSE_USER[15..8] register. This register is one time programmable via the Vivado Hardware Manager. It can also be read via the JTAG cable. Example python code is located in src/oei/python.
+The GbE interface is a simple way to access FPGA internal registers and memory buffers from a PC. The GbE interface is always active, but is not required for operation. This interface is intended for slow controls and debugging and provides fast access to various spy buffers and registers. This interface is based on the "off the shelf Ethernet Interface" developed at Fermilab by Ryan Rivera and Lorenzo Uplegger. 
+
+The default IP address is 192.168.133.XX and the MAC is 00:80:55:DE:00:XX where XX is EFUSE_USER[15..8] register. This register is one time programmable via the Vivado Hardware Manager. It can also be read via the JTAG cable. Example python code is located in src/oei/python.
 
 The memory map is as follows:
 
@@ -76,9 +84,8 @@ The memory map is as follows:
 	0x00002013  Number of errors observed for AFE3 frame marker, stops at 255.
 	0x00002014  Number of errors observed for AFE4 frame marker, stops at 255.
 
-	0x00003000  Output record header parameters, read-write, 30 bits defined as:
+	0x00003000  Output record header parameters, read-write, 26 bits defined as:
 
-			bits 29..26 = output_link_enable(3..0), default is "1111"
 			bits 25..22 = slot_id(3..0), default "0010"
 			bits 21..12 = crate_id(9..0), default is "0000000001"
 			bits 11..6  = detector_id(5..0), default is "000010"
@@ -86,6 +93,34 @@ The memory map is as follows:
 				
 			note: when an output link is disabled it sends FELIX style idle words 
 			(D0.0 & D0.0 & D0.0 & K28.5)
+
+	0x00003001  Output link control to select streaming or self triggered mode sender, 
+                    or idle. This register defaults to 0, all output links idle.
+
+			bits 1:0: output link0 mode. 
+			"0X" = link disabled, send idles
+			"10" = streaming mode sender
+			"11" = self triggered mode sender
+
+			bits 3:2: output link1 mode. 
+			"0X" = link disabled, send idles
+			"10" = streaming mode sender
+			"11" = self triggered mode sender
+
+			bits 5:4: output link2 mode. 
+			"0X" = link disabled, send idles
+			"10" = streaming mode sender
+			"11" = self triggered mode sender
+
+			bits 7:6: output link0 mode. 
+			"0X" = link disabled, send idles
+			"10" = streaming mode sender
+			"11" = self triggered mode sender
+
+
+
+
+
 
 	0x00004000  Master Clock and Timing Endpoint Status Register (read only)
 
@@ -117,13 +152,40 @@ The memory map is as follows:
 	0x00004001  Master Clock and Timing Endpoint Control Register (read write)
 			
 			bit 0: MMCM1 master clock input select (0=local-default, 1=endpoint)
-			bit 1: Timing endpoint data edge select
-		        bits 5..4: Timing endpoint timing group (1..0)
-			bits 15..8:  Timing endpoint address (7..0)
 
 	0x00004002  Write anything to reset master clock MMCM1
 	0x00004003  Write anything to reset timing endpoint
-			
+
+	The following registers are used to determine which physical input channels (numbered 0-39)
+	are connected to which streaming core sender inputs. There are four streaming core senders,
+	each with 4 inputs. These registers are write only. 
+
+	0x00005000  Sender0 input0 channel select, default = ch0 aka AFE0 input 0
+	0x00005001  Sender0 input1 channel select, default = ch1
+	0x00005002  Sender0 input2 channel select, default = ch2
+	0x00005003  Sender0 input3 channel select, default = ch3
+
+	0x00005010  Sender1 input0 channel select, default = ch8 aka AFE1 input 0
+	0x00005011  Sender1 input1 channel select, default = ch9
+	0x00005012  Sender1 input2 channel select, default = ch10
+	0x00005013  Sender1 input3 channel select, default = ch11
+
+	0x00005020  Sender2 input0 channel select, default = ch16 aka AFE2 input 0
+	0x00005021  Sender2 input1 channel select, default = ch17
+	0x00005022  Sender2 input2 channel select, default = ch18
+	0x00005023  Sender2 input3 channel select, default = ch19
+
+	0x00005030  Sender3 input0 channel select, default = ch24 aka AFE3 input 0
+	0x00005031  Sender3 input1 channel select, default = ch25
+	0x00005032  Sender3 input2 channel select, default = ch26
+	0x00005033  Sender3 input3 channel select, default = ch27
+
+	Specify the threshold value to be used for all self-triggered mode senders.
+	Note this value is relative to the automatic baseline value calculated 
+	for each input channel. Default is 256. This register is read/write.
+
+	0x00006000  Relative trigger threshold value for self triggered senders
+
 	0x00009000  Read the FW version aka git commit hash ID, read-only, 28 bits
 
 	0x0000AA55  Test register R/O always returns 0xDEADBEEF, read-only, 32 bit
@@ -247,7 +309,7 @@ The DAPHNE2 board includes the CDR chip ADN2814CPZ U16. This device sends differ
 
 ### Gigabit Ethernet
 
-This firmware uses a Gigabit Ethernet Interface based on the OEI "Off the Shelf Ethernet Interface" developed by Ryan Rivera. This Ethernet interface is fiber and the SFP module connects to Quad 213, channel 0. The default IP address for this interface is 192.168.133.XX where XX is determined by the byte in EFUSE_USER[15..8].
+This firmware uses a Gigabit Ethernet Interface based on the OEI "Off the Shelf Ethernet Interface" developed by Ryan Rivera. This Ethernet interface is fiber and the SFP module connects to Quad 213, channel 0. The default IP address for this interface is determined by the value in EFUSE_USER[15..8].
 
 ### High Speed Serial Links
 

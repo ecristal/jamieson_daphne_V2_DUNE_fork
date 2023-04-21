@@ -24,7 +24,7 @@ entity dstr4 is
 generic( link: std_logic_vector(5 downto 0) := "000000" );
 port(
     reset: in std_logic;
-    enable: in std_logic; -- if low just send idles
+    
     slot_id: std_logic_vector(3 downto 0);
     crate_id: std_logic_vector(9 downto 0);
     detector_id: std_logic_vector(5 downto 0);
@@ -321,13 +321,8 @@ begin
     outreg_proc: process(fclk)
     begin
         if rising_edge(fclk) then
-            if (enable='1') then -- send normal data 
-                dout_reg <= d;
-                kout_reg <= k;
-            else
-                dout_reg <= X"000000BC"; -- output disabled, just send idles continously...
-                kout_reg <= "0001";
-            end if;
+            dout_reg <= d;
+            kout_reg <= k;
         end if;
     end process outreg_proc;
 
