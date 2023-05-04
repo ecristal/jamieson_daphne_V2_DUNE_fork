@@ -20,8 +20,10 @@ use ieee.numeric_std.all;
 library unisim;
 use unisim.vcomponents.all;
 
+use work.daphne2_package.all;
+
 entity dstr4 is
-generic( link: std_logic_vector(5 downto 0) := "000000" );
+generic( link_id: std_logic_vector(5 downto 0) := "000000" );
 port(
     reset: in std_logic;
     
@@ -32,8 +34,8 @@ port(
 
     mclk: in std_logic; -- master clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
-	afe_dat0, afe_dat1, afe_dat2, afe_dat3: in std_logic_vector(13 downto 0); -- four AFE ADC channels
-    ch0_id, ch1_id, ch2_id, ch3_id: in std_logic_vector(5 downto 0); -- the channel ID number
+	afe_dat: in array_4x14_type; -- four AFE ADC channels
+    ch_id: in array_4x6_type; -- the channel ID number
     
     fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
     dout: out std_logic_vector(31 downto 0);
@@ -91,25 +93,25 @@ begin
                 case(wptr) is
                     when "00" =>
                         timestamp_reg <= timestamp;
-                        ch0_0_reg <= afe_dat0;
-                        ch1_0_reg <= afe_dat1;
-                        ch2_0_reg <= afe_dat2;
-                        ch3_0_reg <= afe_dat3;
+                        ch0_0_reg <= afe_dat(0);
+                        ch1_0_reg <= afe_dat(1);
+                        ch2_0_reg <= afe_dat(2);
+                        ch3_0_reg <= afe_dat(3);
                     when "01" =>
-                        ch0_1_reg <= afe_dat0;
-                        ch1_1_reg <= afe_dat1;
-                        ch2_1_reg <= afe_dat2;
-                        ch3_1_reg <= afe_dat3;
+                        ch0_1_reg <= afe_dat(0);
+                        ch1_1_reg <= afe_dat(1);
+                        ch2_1_reg <= afe_dat(2);
+                        ch3_1_reg <= afe_dat(3);
                     when "10" =>
-                        ch0_2_reg <= afe_dat0;
-                        ch1_2_reg <= afe_dat1;
-                        ch2_2_reg <= afe_dat2;
-                        ch3_2_reg <= afe_dat3;
+                        ch0_2_reg <= afe_dat(0);
+                        ch1_2_reg <= afe_dat(1);
+                        ch2_2_reg <= afe_dat(2);
+                        ch3_2_reg <= afe_dat(3);
                     when "11" =>
-                        ch0_3_reg <= afe_dat0;
-                        ch1_3_reg <= afe_dat1;
-                        ch2_3_reg <= afe_dat2;
-                        ch3_3_reg <= afe_dat3;
+                        ch0_3_reg <= afe_dat(0);
+                        ch1_3_reg <= afe_dat(1);
+                        ch2_3_reg <= afe_dat(2);
+                        ch3_3_reg <= afe_dat(3);
                     when others =>
                         null;
                 end case;
@@ -267,10 +269,10 @@ begin
     -- now form the output stream
 
     d <= X"0000003C" when (state=sof) else -- sof of frame word = D0.0 & D0.0 & D0.0 & K28.1
-         link & slot_id & crate_id & detector_id & version_id when (state=hdr0) else
+         link_id & slot_id & crate_id & detector_id & version_id when (state=hdr0) else
          fifo_timestamp(31 downto 0)  when (state=hdr1) else
          fifo_timestamp(63 downto 32) when (state=hdr2) else
-         X"00" & ch3_id & ch2_id & ch1_id & ch0_id when (state=hdr3) else
+         X"00" & ch_id(3) & ch_id(2) & ch_id(1) & ch_id(0) when (state=hdr3) else
          X"DEADBEEF" when (state=hdr4) else
          fifo_do(0)  when (state=dat0) else
          fifo_do(1)  when (state=dat1) else

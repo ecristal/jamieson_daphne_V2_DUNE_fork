@@ -136,8 +136,24 @@ architecture BEHAVIORAL of ethernet_interface is
 		  
     -- simple -- signal user_addr					: std_logic_vector (7 downto 0):= (others => '0'); 
 	-------- end simple declaration section -----------	
+
+    signal new_ip: std_logic_vector(7 downto 0);
   	 											  								     
 begin										 
+
+    -- user_addr is the efuse byte 
+
+    -- MAC address is 00:80:55:DE:00:XX 
+
+    -- lookup table for lower byte of IP ddress per CERN requirements
+
+    new_ip <= X"68" when (user_addr=X"0B") else  -- 10.73.137.104
+              X"69" when (user_addr=X"0C") else  --           105
+              X"6B" when (user_addr=X"0E") else  --           107
+              X"6D" when (user_addr=X"10") else  --           109
+              X"6F" when (user_addr=X"12") else  --           111
+              X"70" when (user_addr=X"13") else  --           112
+              X"64";  -- 10.73.137.100 for all other cases
 
    ec_wrapper : entity work.ethernet_controller_wrapper
       port map (
@@ -153,7 +169,8 @@ begin
                 reset=>reset,	
 										   	   
                 self_addr(31 downto 8)=>self_addr,
-				self_addr(7 downto 0)=>user_addr_sig,
+				-- self_addr(7 downto 0)=>user_addr_sig,
+                self_addr(7 downto 0)=>new_ip, -- remapped IP address JTO
                 self_mac(47 downto 8)=>self_mac,	  				  
                 self_mac(7 downto 0)=>user_addr_sig,	  
                 self_port=>self_port,	  

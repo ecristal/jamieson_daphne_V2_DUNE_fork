@@ -17,10 +17,7 @@ library unisim;
 use unisim.vcomponents.all;
 
 entity stc is
-generic(
-    link_id: std_logic_vector(5 downto 0) := "000000";
-    chan_id: std_logic_vector(5 downto 0) := "000000"
- );
+generic( link_id: std_logic_vector(5 downto 0) := "000000" );
 port(
     reset: in std_logic;    
 
@@ -32,7 +29,8 @@ port(
      
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
-	afe_dat: in std_logic_vector(13 downto 0);
+	afe_dat: in std_logic_vector(13 downto 0); -- aligned AFE data
+    ch_id: in std_logic_vector(5 downto 0); -- input channel id
 
     fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
     fifo_rden: in std_logic;
@@ -267,7 +265,7 @@ begin
          link_id & slot_id & crate_id & detector_id & version_id when (state=hdr0) else
          ts_reg(31 downto 0)  when (state=hdr1) else
          ts_reg(63 downto 32) when (state=hdr2) else
-         X"000000" & "00" & chan_id(5 downto 0) when (state=hdr3) else
+         X"000000" & "00" & ch_id(5 downto 0) when (state=hdr3) else
          X"DEADBEEF" when (state=hdr4) else
          (afe_dly0( 3 downto 0) & afe_dly1(13 downto 0) & afe_dly2(13 downto  0))                          when (state=dat0) else  -- sample2(3..0) & sample1(13..0) & sample0(13..0) 
          (afe_dly0( 7 downto 0) & afe_dly1(13 downto 0) & afe_dly2(13 downto  4))                          when (state=dat2) else  -- sample4(7..0) & sample3(13..0) & sample2(13..4) 

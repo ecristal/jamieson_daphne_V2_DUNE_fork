@@ -27,7 +27,7 @@ end trig;
 architecture trig_arch of trig is
 
     signal din0, din1, din2: std_logic_vector(13 downto 0) := "00000000000000";
-    signal absthresh: std_logic_vector(13 downto 0);
+    signal trig_thresh: std_logic_vector(13 downto 0);
     signal triggered_i, triggered_dly32_i: std_logic;
 
 begin
@@ -35,17 +35,22 @@ begin
     trig_pipeline_proc: process(clock)
     begin
         if rising_edge(clock) then
-            din0 <= din;
-            din1 <= din0;
-            din2 <= din1;
+            din0 <= din;  -- latest sample
+            din1 <= din0; -- previous sample
+            din2 <= din1; -- previous previous sample
         end if;
     end process trig_pipeline_proc;
 
     -- user-specified threshold is RELATIVE to the calculated average baseline level
+    -- NOTE that the trigger pulse is NEGATIVE going! We want to SUBTRACT the relative 
+    -- threshold from the calculated average baseline level.
 
-    absthresh <= std_logic_vector( unsigned(baseline) + unsigned(threshold) );
+    trig_thresh <= std_logic_vector( unsigned(baseline) - unsigned(threshold) );
 
-    triggered_i <= '1' when ( din2>absthresh and din1<absthresh and din0<absthresh ) else '0';
+    -- our super basic trigger condition is this: one sample ABOVE trig_thresh followed by two samples
+    -- BELOW trig_thresh.
+
+    triggered_i <= '1' when ( din2>trig_thresh and din1<trig_thresh and din0<trig_thresh ) else '0';
 
     -- add in some fake/synthetic latency, adjust it so total trigger latency is 64 clocks
 

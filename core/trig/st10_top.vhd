@@ -14,7 +14,7 @@ use unisim.vcomponents.all;
 use work.daphne2_package.all;
 
 entity st10_top is
-generic( link_id: std_logic_vector(5 downto 0)  := "000000" );
+generic( link_id: std_logic_vector(5 downto 0)  := "000000" ); -- this is the OUTPUT link ID that goes into the header
 port(
     reset: in std_logic;
 
@@ -27,6 +27,7 @@ port(
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
 	afe_dat: in array_10x14_type;
+    ch_id: in array_10x6_type; -- input channel IDs
 
     fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
     dout: out std_logic_vector(31 downto 0);
@@ -54,8 +55,7 @@ architecture st10_top_arch of st10_top is
     signal k, kout_reg: std_logic_vector( 3 downto 0);
 
     component stc is
-    generic( link_id: std_logic_vector(5 downto 0) := "000000";
-             chan_id: std_logic_vector(5 downto 0) := "000000" );
+    generic( link_id: std_logic_vector(5 downto 0) := "000000" );
     port(
         reset: in std_logic;
 
@@ -68,6 +68,7 @@ architecture st10_top_arch of st10_top is
         aclk: in std_logic; -- AFE clock 62.500 MHz
         timestamp: in std_logic_vector(63 downto 0);
     	afe_dat: in std_logic_vector(13 downto 0);
+        ch_id: in std_logic_vector(5 downto 0);
         fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
         fifo_rden: in std_logic;
         fifo_ae: out std_logic;
@@ -83,10 +84,7 @@ begin
     gen_stc: for i in 9 downto 0 generate
 
         stc_inst: stc 
-        generic map(
-            link_id => link_id,
-            chan_id => std_logic_vector( to_unsigned(i,6) ) 
-        )
+        generic map( link_id => link_id ) 
         port map(
             reset => reset,
 
@@ -99,6 +97,7 @@ begin
             aclk => aclk,
             timestamp => timestamp,
         	afe_dat => afe_dat(i),
+            ch_id => ch_id(i),
             fclk => fclk,
             fifo_rden => fifo_rden(i),
             fifo_ae => fifo_ae(i),

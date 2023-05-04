@@ -9,13 +9,15 @@ use ieee.numeric_std.all;
 use STD.textio.all;
 use ieee.std_logic_textio.all;
 
+use work.daphne2_package.all;
+
 entity dstr4_testbench is
 end dstr4_testbench;
 
 architecture dstr4_testbench_arch of dstr4_testbench is
 
 component dstr4 is
-generic( link: std_logic_vector(5 downto 0) := "000000" );
+generic( link_id: std_logic_vector(5 downto 0) := "000000" );
 port(
     reset: in std_logic; -- async reset from uC
     mclk: in std_logic; -- master clock 62.5MHz
@@ -24,9 +26,9 @@ port(
     detector_id:   std_logic_vector(5 downto 0);
     version_id: std_logic_vector(5 downto 0);
     timestamp: in std_logic_vector(63 downto 0);
-    ch0_id, ch1_id, ch2_id, ch3_id: in std_logic_vector(5 downto 0); -- the channel ID number   
-	afe_dat0, afe_dat1, afe_dat2, afe_dat3: in std_logic_vector(13 downto 0); -- four AFE ADC channels
-    fclk: in std_logic; -- transmit clock to FELIX 120.xxx MHz
+    afe_dat: in array_4x14_type; -- four AFE ADC channels
+    ch_id: in array_4x6_type; -- the channel ID number    fclk: in std_logic; -- transmit clock to FELIX 120.xxx MHz
+    fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
     dout: out std_logic_vector(31 downto 0);
     kout: out std_logic_vector(3 downto 0)	
   );
@@ -75,7 +77,7 @@ begin
 end process;
 
 DUT: dstr4
-generic map ( link => "000000" )
+generic map ( link_id => "000000" )
 port map(
     reset => reset,
     mclk => mclk,
@@ -84,14 +86,14 @@ port map(
     crate_id => crate_id,
     detector_id => detector_id,
     version_id => version_id,
-    ch0_id => "000000", 
-    ch1_id => "000001", 
-    ch2_id => "000010",
-    ch3_id => "001001",
-	afe_dat0 => afe_dat0,
-	afe_dat1 => afe_dat1,
-	afe_dat2 => afe_dat2,
-	afe_dat3 => afe_dat3,
+    ch_id(0) => "000000", 
+    ch_id(1) => "000001", 
+    ch_id(2) => "000010",
+    ch_id(3) => "001001",
+	afe_dat(0) => afe_dat0,
+	afe_dat(1) => afe_dat1,
+	afe_dat(2) => afe_dat2,
+	afe_dat(3) => afe_dat3,
     fclk => fclk,
     kout => kout,
     dout => dout

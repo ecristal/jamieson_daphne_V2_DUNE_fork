@@ -52,7 +52,7 @@ Output spy buffers capture the data that the core is sending on the DAQ0 output 
 
 The GbE interface is a simple way to access FPGA internal registers and memory buffers from a PC. The GbE interface is always active, but is not required for operation. This interface is intended for slow controls and debugging and provides fast access to various spy buffers and registers. This interface is based on the "off the shelf Ethernet Interface" developed at Fermilab by Ryan Rivera and Lorenzo Uplegger. 
 
-The default IP address is 192.168.133.XX and the MAC is 00:80:55:DE:00:XX where XX is EFUSE_USER[15..8] register. This register is one time programmable via the Vivado Hardware Manager. It can also be read via the JTAG cable. Example python code is located in src/oei/python.
+The default IP address is .168.133.XX and the MAC is 00:80:55:DE:00:XX where XX is EFUSE_USER[15..8] register. This register is one time programmable via the Vivado Hardware Manager. It can also be read via the JTAG cable. Example python code is located in src/oei/python.
 
 The memory map is as follows:
 
@@ -94,7 +94,7 @@ The memory map is as follows:
 			note: when an output link is disabled it sends FELIX style idle words 
 			(D0.0 & D0.0 & D0.0 & K28.5)
 
-	0x00003001  Output link control to select streaming or self triggered mode sender, 
+	0x00003001  Output link control byte. used to select streaming or self triggered mode sender, 
                     or idle. This register defaults to 0, all output links idle.
 
 			bits 1:0: output link0 mode. 
@@ -116,11 +116,6 @@ The memory map is as follows:
 			"0X" = link disabled, send idles
 			"10" = streaming mode sender
 			"11" = self triggered mode sender
-
-
-
-
-
 
 	0x00004000  Master Clock and Timing Endpoint Status Register (read only)
 
@@ -156,35 +151,61 @@ The memory map is as follows:
 	0x00004002  Write anything to reset master clock MMCM1
 	0x00004003  Write anything to reset timing endpoint
 
-	The following registers are used to determine which physical input channels (numbered 0-39)
-	are connected to which streaming core sender inputs. There are four streaming core senders,
-	each with 4 inputs. These registers are write only. 
+	The following registers are used to determine which physical input channels 
+        (which are numbered decimal 0-7, 10-17, 20-27, 30-37, and 40-47)
+	are connected to which core sender inputs. These registers are read/write.
+	Each register must contain a valid input number (as listed above) otherwise it will 
+	set the corresponding mux output bus to all zeros.
 
-	0x00005000  Sender0 input0 channel select, default = ch0 aka AFE0 input 0
-	0x00005001  Sender0 input1 channel select, default = ch1
-	0x00005002  Sender0 input2 channel select, default = ch2
-	0x00005003  Sender0 input3 channel select, default = ch3
+	0x00005000  StreamSender0 and SelfTrigSender0 input0 channel select, default = 0  (AFE0 ch0)
+	0x00005001  StreamSender0 and SelfTrigSender0 input1 channel select, default = 1  (AFE0 ch1)
+	0x00005002  StreamSender0 and SelfTrigSender0 input2 channel select, default = 2  (AFE0 ch2)
+	0x00005003  StreamSender0 and SelfTrigSender0 input3 channel select, default = 3  (AFE0 ch3)
+	0x00005004                    SelfTrigSender0 input4 channel select, default = 4  (AFE0 ch4) 
+	0x00005005                    SelfTrigSender0 input5 channel select, default = 5  (AFE0 ch5)
+	0x00005006                    SelfTrigSender0 input6 channel select, default = 6  (AFE0 ch6)
+	0x00005007                    SelfTrigSender0 input7 channel select, default = 7  (AFE0 ch7)
+	0x00005008                    SelfTrigSender0 input8 channel select, default = 10 (AFE1 ch0)
+	0x00005009                    SelfTrigSender0 input9 channel select, default = 11 (AFE1 ch1)
 
-	0x00005010  Sender1 input0 channel select, default = ch8 aka AFE1 input 0
-	0x00005011  Sender1 input1 channel select, default = ch9
-	0x00005012  Sender1 input2 channel select, default = ch10
-	0x00005013  Sender1 input3 channel select, default = ch11
+	0x0000500A  StreamSender1 and SelfTrigSender1 input0 channel select, default = 12 (AFE1 ch2)
+	0x0000500B  StreamSender1 and SelfTrigSender1 input1 channel select, default = 13 (AFE1 ch3)
+	0x0000500C  StreamSender1 and SelfTrigSender1 input2 channel select, default = 14 (AFE1 ch4)
+	0x0000500D  StreamSender1 and SelfTrigSender1 input3 channel select, default = 15 (AFE1 ch5)
+	0x0000500E                    SelfTrigSender1 input4 channel select, default = 16 (AFE1 ch6) 
+	0x0000500F                    SelfTrigSender1 input5 channel select, default = 17 (AFE1 ch7)
+	0x00005010                    SelfTrigSender1 input6 channel select, default = 20 (AFE2 ch0)
+	0x00005011                    SelfTrigSender1 input7 channel select, default = 21 (AFE2 ch1)
+	0x00005012                    SelfTrigSender1 input8 channel select, default = 22 (AFE2 ch2)
+	0x00005013                    SelfTrigSender1 input9 channel select, default = 23 (AFE2 ch3)
 
-	0x00005020  Sender2 input0 channel select, default = ch16 aka AFE2 input 0
-	0x00005021  Sender2 input1 channel select, default = ch17
-	0x00005022  Sender2 input2 channel select, default = ch18
-	0x00005023  Sender2 input3 channel select, default = ch19
+	0x00005014  StreamSender2 and SelfTrigSender2 input0 channel select, default = 24 (AFE2 ch4)
+	0x00005015  StreamSender2 and SelfTrigSender2 input1 channel select, default = 25 (AFE2 ch5)
+	0x00005016  StreamSender2 and SelfTrigSender2 input2 channel select, default = 26 (AFE2 ch6)
+	0x00005017  StreamSender2 and SelfTrigSender2 input3 channel select, default = 27 (AFE2 ch7)
+	0x00005018                    SelfTrigSender2 input4 channel select, default = 30 (AFE3 ch0) 
+	0x00005019                    SelfTrigSender2 input5 channel select, default = 31 (AFE3 ch1)
+	0x0000501A                    SelfTrigSender2 input6 channel select, default = 32 (AFE3 ch2)
+	0x0000501B                    SelfTrigSender2 input7 channel select, default = 33 (AFE3 ch3)
+	0x0000501C                    SelfTrigSender2 input8 channel select, default = 34 (AFE3 ch4)
+	0x0000501D                    SelfTrigSender2 input9 channel select, default = 35 (AFE3 ch5)
 
-	0x00005030  Sender3 input0 channel select, default = ch24 aka AFE3 input 0
-	0x00005031  Sender3 input1 channel select, default = ch25
-	0x00005032  Sender3 input2 channel select, default = ch26
-	0x00005033  Sender3 input3 channel select, default = ch27
+	0x0000501E  StreamSender3 and SelfTrigSender3 input0 channel select, default = 36 (AFE3 ch6)
+	0x0000501F  StreamSender3 and SelfTrigSender3 input1 channel select, default = 37 (AFE3 ch7)
+	0x00005020  StreamSender3 and SelfTrigSender3 input2 channel select, default = 40 (AFE4 ch0)
+	0x00005021  StreamSender3 and SelfTrigSender3 input3 channel select, default = 41 (AFE4 ch1)
+	0x00005022                    SelfTrigSender3 input4 channel select, default = 42 (AFE4 ch2) 
+	0x00005023                    SelfTrigSender3 input5 channel select, default = 43 (AFE4 ch3)
+	0x00005024                    SelfTrigSender3 input6 channel select, default = 44 (AFE4 ch4)
+	0x00005025                    SelfTrigSender3 input7 channel select, default = 45 (AFE4 ch5)
+	0x00005026                    SelfTrigSender3 input8 channel select, default = 46 (AFE4 ch6)
+	0x00005027                    SelfTrigSender3 input9 channel select, default = 47 (AFE4 ch7)
 
 	Specify the threshold value to be used for all self-triggered mode senders.
 	Note this value is relative to the automatic baseline value calculated 
 	for each input channel. Default is 256. This register is read/write.
 
-	0x00006000  Relative trigger threshold value for self triggered senders
+	0x00006000  Trigger threshold for self triggered senders, 14 bits R/W
 
 	0x00009000  Read the FW version aka git commit hash ID, read-only, 28 bits
 

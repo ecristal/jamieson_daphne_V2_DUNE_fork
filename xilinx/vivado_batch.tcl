@@ -22,9 +22,14 @@ read_vhdl ../front_end/front_end.vhd
 read_vhdl ../spy/spy.vhd
 read_vhdl ../spi/spi.vhd
 
-read_vhdl ../core/crc20_update.vhd
-read_vhdl ../core/stream/dstr4.vhd
 read_vhdl ../core/core.vhd
+ read_vhdl ../core/stream/inmux.vhd
+ read_vhdl ../core/stream/dstr4.vhd
+ read_vhdl ../core/stream/st10_top.vhd
+  read_vhdl ../core/stream/stc.vhd
+   read_vhdl ../core/stream/baseline256.vhd
+   read_vhdl ../core/stream/trig.vhd
+ read_vhdl ../core/crc20_update.vhd
 
 read_vhdl ../oei/hdl/burst_traffic_controller.vhd
 read_vhdl ../oei/hdl/ethernet_interface.vhd

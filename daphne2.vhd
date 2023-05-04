@@ -3,8 +3,9 @@
 -- Target: XC7A200T-2FBG676C
 -- PCB version: DAPHNE V2A (this adds four general output links, one dedicated GbE link, separate
 -- MGT refclocks for DAQ links (120.237MHz) and GbE (125MHz). 
--- Features: Automatic AFE data alignment, OEI GbE interface, Spy buffers, 4 outputs to DAQ, streaming and self trig
--- senders, new timing endpoint logic, efuse.
+--
+-- Firmware features: Automatic AFE data alignment, OEI GbE interface, Spy buffers, 
+-- 4 outputs to DAQ, streaming and self trig senders combined, new timing endpoint logic, efuse.
 --
 -- Jamieson Olsen <jamieson@fnal.gov>
 
@@ -286,19 +287,23 @@ architecture DAPHNE2_arch of DAPHNE2 is
         mclk: in std_logic; -- master clock 62.5MHz
         sclk100: in std_logic; -- system clock 100MHz
         reset: in std_logic; -- for sender logic and for GTP quad
-        din: in array_5x9x14_type;  -- AFE data synchronized to clock
+        afe_dat: in array_5x9x14_type;  -- AFE data synchronized to clock
         timestamp: in std_logic_vector(63 downto 0);
-        ch_sel: in array_4x4x6_type; -- choose which input channels are used for streaming senders
         slot_id: in std_logic_vector(3 downto 0);
         crate_id: in std_logic_vector(9 downto 0);
         detector_id: in std_logic_vector(5 downto 0);
         version_id: in std_logic_vector(5 downto 0);
         outmode: in std_logic_vector(7 downto 0); -- choose streaming or self-trig sender for each output
         threshold: in std_logic_vector(13 downto 0); -- for self-trig senders, threshold relative to average baseline
-        oeiclk: in std_logic;
+
+        oeiclk: in std_logic; -- interface used to read output spy buffer and to r/w input mux control regs
         trig: in std_logic;
-        spy_addr: in std_logic_vector(11 downto 0);
-        spy_data: out std_logic_vector(31 downto 0);
+        addr: in std_logic_vector(11 downto 0);
+        din: in std_logic_vector(5 downto 0);
+        spy_dout: out std_logic_vector(31 downto 0);
+        inmux_we: in std_logic;
+        inmux_dout: out std_logic_vector(5 downto 0);
+
         daq_refclk_p, daq_refclk_n: in std_logic; -- MGT REFCLK for DAQ, LVDS, quad 213, refclk0, 120.237MHz
         daq0_tx_p, daq0_tx_n: out std_logic;
         daq1_tx_p, daq1_tx_n: out std_logic;
@@ -369,7 +374,8 @@ architecture DAPHNE2_arch of DAPHNE2 is
     signal spi_cmd_fifo_wren, spi_res_fifo_rden: std_logic;
     signal spi_res_fifo_data: std_logic_vector(7 downto 0);
 
-    signal ch_sel_reg: array_4x4x6_type; -- choose which input channels are used for core inputs
+    signal inmux_we: std_logic;
+    signal inmux_dout: std_logic_vector(5 downto 0);
 
     signal outmode_reg: std_logic_vector(7 downto 0);
     signal outmode_we: std_logic;
@@ -418,7 +424,7 @@ begin
     -- each endpoint in the system needs to have a unique address
     -- set this to 0x000F + EFUSE
 
-    ep_addr <= std_logic_vector( unsigned(X"000F") + unsigned(EFUSEUSR(15 downto 8)) );
+    ep_addr <= std_logic_vector( unsigned(EFUSEUSR(15 downto 8)) + to_unsigned(15,16)  );
 
     -- main clock distribution includes timing endpoint logic
     -- there are two cascaded MMCMs with separate LOCKED status bits
@@ -728,18 +734,14 @@ begin
                (X"00000000000000" & errcnt(2)) when std_match(rx_addr_reg, AFE2_ERRCNT_ADDR) else
                (X"00000000000000" & errcnt(3)) when std_match(rx_addr_reg, AFE3_ERRCNT_ADDR) else
                (X"00000000000000" & errcnt(4)) when std_match(rx_addr_reg, AFE4_ERRCNT_ADDR) else
-
                (X"00000000" & core_spy_data) when std_match(rx_addr_reg, SPYBUFDOUT0_BASEADDR) else 
-
                (X"00000000" & "000000" & daq_out_param_reg) when std_match(rx_addr_reg, DAQ_OUT_PARAM_ADDR) else -- 26 bits
-
                (X"000000000000" & "000" & mclk_stat_reg) when std_match(rx_addr_reg, MCLK_STAT_ADDR) else
                (X"000000000000" & mclk_ctrl_reg) when std_match(rx_addr_reg, MCLK_CTRL_ADDR) else 
-
                (X"00000000000000" & spi_res_fifo_data) when std_match(rx_addr_reg, SPI_FIFO_ADDR) else 
-
                (X"000000000000" & "00" & threshold_reg(13 downto 0)) when std_match(rx_addr_reg, THRESHOLD_BASEADDR) else 
                (X"00000000000000" & outmode_reg(7 downto 0)) when std_match(rx_addr_reg, DAQ_OUTMODE_BASEADDR) else 
+               (X"00000000000000" & "00" & inmux_dout(5 downto 0)) when std_match(rx_addr_reg, CORE_INMUX_ADDR) else
 
                (others=>'0');
 
@@ -899,32 +901,9 @@ begin
         end if;
     end process thresh_proc;
 
+    -- decode write enable for core inmux control register block of 40 6-bit registers
 
-
-
-
-
-    -- There are four senders in the streaming core, each sender has four input channels. 
-    -- The following registers specify which input channel (0-39) is connected to each sender.
-    -- These registers are write only. The streaming output record format includes fields in the 
-    -- header which indicate which input channels are being used.
-
-    SenderGen: for s in 3 downto 0 generate
-        CoreInGen: for i in 3 downto 0 generate
-
-            sender_inmux_proc: process(oeiclk)
-            begin
-                if rising_edge(oeiclk) then
-                    if (reset_async='1') then 
-                        ch_sel_reg(s)(i) <= std_logic_vector(to_unsigned(((s*8)+i),6));              
-                    elsif (rx_addr = std_logic_vector(unsigned(CORE_SENDER_INMUX_BASEADDR) + to_unsigned(((s*16)+i),32) ) and rx_wren='1') then
-                        ch_sel_reg(s)(i) <= rx_data(5 downto 0); 
-                    end if;
-                end if;
-            end process sender_inmux_proc;
-
-        end generate CoreInGen;
-    end generate SenderGen;
+    inmux_we <= '1' when (std_match(rx_addr,CORE_INMUX_ADDR) and rx_wren='1') else '0';
 
     -- combo core logic, streaming and self-trig
 
@@ -933,9 +912,10 @@ begin
         mclk => mclk,
         sclk100 => sclk100,
         reset => reset_async,
-        din => afe_dout,
+
+        afe_dat => afe_dout,
         timestamp => timestamp,
-        ch_sel => ch_sel_reg,
+
         outmode => outmode_reg,
         threshold => threshold_reg,
 
@@ -946,8 +926,11 @@ begin
    
         oeiclk => oeiclk,
         trig => trig_sync,
-        spy_addr => rx_addr(11 downto 0),
-        spy_data => core_spy_data(31 downto 0),
+        addr => rx_addr(11 downto 0),
+        din => rx_data(5 downto 0),
+        inmux_we => inmux_we,
+        spy_dout => core_spy_data(31 downto 0),
+        inmux_dout => inmux_dout,
         
         daq_refclk_p => daq_refclk_p, daq_refclk_n => daq_refclk_n,
         daq0_tx_p => daq0_tx_p, daq0_tx_n => daq0_tx_n,

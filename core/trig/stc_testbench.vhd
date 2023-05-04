@@ -17,10 +17,7 @@ end stc_testbench;
 architecture stc_testbench_arch of stc_testbench is
 
 component stc is
-generic(
-    link_id:     std_logic_vector(5 downto 0) := "000000";
-    chan_id:    std_logic_vector(5 downto 0) := "000000"
-);
+generic( link_id: std_logic_vector(5 downto 0) := "000000" );
 port(
     reset: in std_logic;
 
@@ -33,6 +30,7 @@ port(
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
 	afe_dat: in std_logic_vector(13 downto 0);
+    ch_id: in std_logic_vector(5 downto 0);
 
     fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
     fifo_rden: in std_logic;
@@ -79,7 +77,7 @@ begin
     afe_dat <= "10000000001111";
     wait for 1000ns;
 
-    -- here's the fast pulse
+    -- here's the fast pulse -- this is a positive pulse, but we should make this negative...
 
     wait until falling_edge(aclk);
     afe_dat <= "11111011100001";
@@ -100,8 +98,7 @@ end process waveform_proc;
 
 DUT: stc
 generic map(
-    link_id => "000000", 
-    chan_id => "000000" )
+    link_id => "000000" )
 port map(
     reset => reset,
 
@@ -114,6 +111,7 @@ port map(
     aclk => aclk,
     timestamp => timestamp,
 	afe_dat => afe_dat,
+    ch_id => "000011",
 
     fclk => fclk,
     fifo_rden => '0'

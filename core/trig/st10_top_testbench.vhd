@@ -8,7 +8,7 @@ use ieee.numeric_std.all;
 use STD.textio.all;
 use ieee.std_logic_textio.all;
 
-use work.daphne_package.all;
+use work.daphne2_package.all;
 
 entity st10_top_testbench is
 end st10_top_testbench;
@@ -29,6 +29,7 @@ port(
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
 	afe_dat: in array_10x14_type;
+    ch_id: in array_10x6_type; -- input channel IDs
 
     fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
     dout: out std_logic_vector(31 downto 0);
@@ -42,6 +43,8 @@ signal timestamp: std_logic_vector(63 downto 0) := X"0000000000000000";
 
 signal fclk: std_logic := '0';
 signal afe_dat: array_10x14_type;
+
+constant ch_id: array_10x6_type := ("011010", "011000", "010011", "010001", "010000", "001100", "001000", "000110", "000011", "000000");
 
 begin
 
@@ -122,6 +125,7 @@ port map(
     aclk => aclk,
     timestamp => timestamp,
 	afe_dat => afe_dat,
+    ch_id => ch_id,
     fclk => fclk
 );
 
