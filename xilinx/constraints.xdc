@@ -82,7 +82,7 @@ set_property LOC F11 [get_ports daq_refclk_p]
 
 ### DAQ link 0, channel 0 Quad 213, X0Y4
 
-set_property LOC GTPE2_CHANNEL_X0Y4 [get_cells core_inst/daq_quad_inst/U0/daphne2_daq_txonly_init_i/daphne2_daq_txonly_i/gt0_daphne2_daq_txonly_i/gtpe2_i]
+set_property LOC GTPE2_CHANNEL_X0Y4 [get_cells core_inst/core_mgt4_inst/daq_quad_inst/U0/daphne2_daq_txonly_init_i/daphne2_daq_txonly_i/gt0_daphne2_daq_txonly_i/gtpe2_i]
 
 set_property PACKAGE_PIN H6 [get_ports {daq0_sfp_los}]
 set_property PACKAGE_PIN E6 [get_ports {daq0_sfp_abs}]
@@ -93,7 +93,7 @@ set_property IOSTANDARD LVTTL [get_ports {daq0_sfp_*}]
 
 ### DAQ link 1, channel 1 Quad 213, X0Y5
 
-set_property LOC GTPE2_CHANNEL_X0Y5 [get_cells core_inst/daq_quad_inst/U0/daphne2_daq_txonly_init_i/daphne2_daq_txonly_i/gt1_daphne2_daq_txonly_i/gtpe2_i]
+set_property LOC GTPE2_CHANNEL_X0Y5 [get_cells core_inst/core_mgt4_inst/daq_quad_inst/U0/daphne2_daq_txonly_init_i/daphne2_daq_txonly_i/gt1_daphne2_daq_txonly_i/gtpe2_i]
 
 set_property PACKAGE_PIN E5 [get_ports {daq1_sfp_los}]
 set_property PACKAGE_PIN L8 [get_ports {daq1_sfp_abs}]
@@ -104,7 +104,7 @@ set_property IOSTANDARD LVTTL [get_ports {daq1_sfp_*}]
 
 ### DAQ link 2, channel 2 Quad 213, X0Y6
 
-set_property LOC GTPE2_CHANNEL_X0Y6 [get_cells core_inst/daq_quad_inst/U0/daphne2_daq_txonly_init_i/daphne2_daq_txonly_i/gt2_daphne2_daq_txonly_i/gtpe2_i]
+set_property LOC GTPE2_CHANNEL_X0Y6 [get_cells core_inst/core_mgt4_inst/daq_quad_inst/U0/daphne2_daq_txonly_init_i/daphne2_daq_txonly_i/gt2_daphne2_daq_txonly_i/gtpe2_i]
 
 set_property PACKAGE_PIN G2 [get_ports {daq2_sfp_los}]
 set_property PACKAGE_PIN E1 [get_ports {daq2_sfp_abs}]
@@ -115,7 +115,7 @@ set_property IOSTANDARD LVTTL [get_ports {daq2_sfp_*}]
 
 ### DAQ link 3, channel 3 Quad 213, X0Y7
 
-set_property LOC GTPE2_CHANNEL_X0Y7 [get_cells core_inst/daq_quad_inst/U0/daphne2_daq_txonly_init_i/daphne2_daq_txonly_i/gt3_daphne2_daq_txonly_i/gtpe2_i]
+set_property LOC GTPE2_CHANNEL_X0Y7 [get_cells core_inst/core_mgt4_inst/daq_quad_inst/U0/daphne2_daq_txonly_init_i/daphne2_daq_txonly_i/gt3_daphne2_daq_txonly_i/gtpe2_i]
 
 set_property PACKAGE_PIN E2 [get_ports {daq3_sfp_los}]
 set_property PACKAGE_PIN F2 [get_ports {daq3_sfp_abs}]

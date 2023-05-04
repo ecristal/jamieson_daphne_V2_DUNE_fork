@@ -34,9 +34,7 @@ The streaming sender design takes 4 AFE data streams and packs 64 samples from e
 
 ### Timing Endpoint
 
-The timing endpoint firmware block interfaces to the DAPHNE timing input (optical link) and generates the master 62.5 MHz clock and a 64 bit timestamp. The timing endpoint design used here is the NEW style timing protocol based on pulse width modulated clock at 62.5MHz. An external ADN2814 clock and data recovery chip is present, but this new timing scheme no longer requires it. The AD2814 clock output is not used by the new timing endpoint logic, and the DATAOUT signal is the encoded clock. The "pdts" endpoint logic was developed by Dave Newbold and others at Bristol UK and adapted to DAPHNE by Adrian @ UPENN. Through the GbE interface the user can monitor all status bits related to the timing endpoint and control status bits as well. The most important control bit selects either the local clocks (with fake timestamp) or timing endpoint to run the FPGA. 
-
-The default timing endpoint address is a 16 bit unsigned number. It is determined by reading the EFUSE_USER bits [15..8] and adding 0x000F to it.
+The timing endpoint firmware block interfaces to the DAPHNE timing input (optical link) and generates the master 62.5 MHz clock and a 64 bit timestamp. The timing endpoint design used here is the NEW style timing protocol based on pulse width modulated clock at 62.5MHz. An external ADN2814 clock and data recovery chip is present, but this new timing scheme no longer requires it. The AD2814 clock output is not used by the new timing endpoint logic, and the DATAOUT signal is the encoded clock. The "pdts" endpoint logic was developed by Dave Newbold and others at Bristol UK and adapted to DAPHNE by Adrian @ UPENN. Through the GbE interface the user can monitor all status bits related to the timing endpoint and control status bits as well. The most important control bit selects either the local clocks (with fake timestamp) or timing endpoint to run the FPGA. Each timing endpoint in the system is expected to have a unique address. Here it is determined by the byte value in the EFUSE register. For details look under the Hardware section below.
 
 ### Spy Buffers
 
@@ -50,9 +48,7 @@ Output spy buffers capture the data that the core is sending on the DAQ0 output 
 
 ### Gigabit Ethernet (GbE)
 
-The GbE interface is a simple way to access FPGA internal registers and memory buffers from a PC. The GbE interface is always active, but is not required for operation. This interface is intended for slow controls and debugging and provides fast access to various spy buffers and registers. This interface is based on the "off the shelf Ethernet Interface" developed at Fermilab by Ryan Rivera and Lorenzo Uplegger. 
-
-The default IP address is .168.133.XX and the MAC is 00:80:55:DE:00:XX where XX is EFUSE_USER[15..8] register. This register is one time programmable via the Vivado Hardware Manager. It can also be read via the JTAG cable. Example python code is located in src/oei/python.
+The GbE interface is a simple way to access FPGA internal registers and memory buffers from a PC. The GbE interface is always active, but is not required for operation. This interface is intended for slow controls and debugging and provides fast access to various spy buffers and registers. This interface is based on the "off the shelf Ethernet Interface" developed at Fermilab by Ryan Rivera and Lorenzo Uplegger. (The default IP address and MAC address is defined in oei/ethernet_interface.vhd and the contents of the one-time programmable EFUSE_USER register in the FPGA. Details on the mapping is in the Hardware section below.) The GbE interface accesses the user firmware through a synchronous address data bus (A32D64) and thus all user firmware is memory mapped into this address space. 
 
 The memory map is as follows:
 
@@ -285,7 +281,20 @@ Memory Map Notes:
 
 SPI slave logic is used for communication with the microcontroller. A pair of FIFOs are used to access this SPI slave device from the GbE interface.
 
-## Overview of Hardware Subsystems
+
+
+
+
+
+
+
+
+
+
+
+
+---
+## Overview of Hardware
 
 ### Front Panel Index
 
@@ -330,7 +339,27 @@ The DAPHNE2 board includes the CDR chip ADN2814CPZ U16. This device sends differ
 
 ### Gigabit Ethernet
 
-This firmware uses a Gigabit Ethernet Interface based on the OEI "Off the Shelf Ethernet Interface" developed by Ryan Rivera. This Ethernet interface is fiber and the SFP module connects to Quad 213, channel 0. The default IP address for this interface is determined by the value in EFUSE_USER[15..8].
+The Gigabit Ethernet interface is FIBER and the SFP module connects to Quad 213, channel 0. The default IP and MAC address for this interface is determined by the byte value in the EFUSE register.
+
+### EFUSE Register
+
+The FPGA contains a special one time programmable register called EFUSE. We use bits [15..8] of this register to store a unique value for each DAPHNE board. The EFUSE register is "burned" by using the Hardware Manager tool in Vivado and a JTAG cable is required for this operation.
+
+The table below shows how this EFUSE byte value is used to determine the MAC, IP, and Timing Endpoint address:
+
+    Sticker  EFUSE_USER[15..8]   MAC_ADDR            IP_ADDR (CERN)    TIMING_ENDPOINT_ADDR
+    1        0x0B                00:80:55:DE:00:0B   10.73.137.104     0x000A
+    2        0x0C                00:80:55:DE:00:0C   10.73.137.105     0x000B
+    3        0x0D                00:80:55:DE:00:0D   TBD               0x000C
+    4        0x0F                00:80:55:DE:00:0F   TBD               0x000E
+    5        0x0E                00:80:55:DE:00:0E   10.73.137.107     0x001D
+    6        0x10                00:80:55:DE:00:10   10.73.137.109     0x001F
+    7        0x11                00:80:55:DE:00:11   TBD               0x0020
+    8        0x12                00:80:55:DE:00:12   10.73.137.111     0x0021
+    9        0x13                00:80:55:DE:00:13   10.73.137.112     0x0022
+    10       0x14                00:80:55:DE:00:14   TBD               0x0023
+    11       0x15                00:80:55:DE:00:15   TBD               0x0024
+    12       0x16                00:80:55:DE:00:16   TBD               0x0025
 
 ### High Speed Serial Links
 
