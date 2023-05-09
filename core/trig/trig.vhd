@@ -20,14 +20,15 @@ port(
     din: in std_logic_vector(13 downto 0); -- raw AFE data
     threshold: in std_logic_vector(13 downto 0); -- trigger threshold relative to baseline
     baseline: in std_logic_vector(13 downto 0); -- average signal level computed over past 256 samples
-    triggered: out std_logic
+    triggered: out std_logic;
+    trigsample: out std_logic_vector(13 downto 0) -- the sample that caused the trigger
 );
 end trig;
 
 architecture trig_arch of trig is
 
     signal din0, din1, din2: std_logic_vector(13 downto 0) := "00000000000000";
-    signal trig_thresh: std_logic_vector(13 downto 0);
+    signal trig_thresh, trigsample_reg: std_logic_vector(13 downto 0);
     signal triggered_i, triggered_dly32_i: std_logic;
 
 begin
@@ -73,5 +74,18 @@ begin
         q   => triggered,
         q31 => open
     );
+
+    -- capture the sample that caused the trigger 
+
+    samplecap_proc: process(clock)
+    begin
+        if rising_edge(clock) then
+            if (triggered_i='1') then
+                trigsample_reg <= din0;
+            end if;
+        end if;    
+    end process samplecap_proc;
+
+    trigsample <= trigsample_reg;
 
 end trig_arch;

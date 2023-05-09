@@ -64,7 +64,7 @@ architecture stc_arch of stc is
     type array_4x8_type is array(3 downto 0) of std_logic_vector(7 downto 0);
     signal DIP, DOP: array_4x8_type;
 
-    signal baseline: std_logic_vector(13 downto 0);
+    signal baseline, trigsample: std_logic_vector(13 downto 0);
 
     component baseline256 is -- establish average signal level
     port(
@@ -80,7 +80,8 @@ architecture stc_arch of stc is
         din: in std_logic_vector(13 downto 0);
         baseline: in std_logic_vector(13 downto 0);
         threshold: in std_logic_vector(13 downto 0);
-        triggered: out std_logic);
+        triggered: out std_logic;
+        trigsample: out std_logic_vector(13 downto 0));
     end component;
 
     component CRC_OL is
@@ -175,7 +176,8 @@ begin
          din => afe_dat, -- watching live AFE data
          baseline => baseline,
          threshold => threshold,
-         triggered => triggered
+         triggered => triggered,
+         trigsample => trigsample -- the ADC sample that caused the trigger 
     );        
 
     -- FSM waits for trigger condition then assembles output frame and stores into FIFO
@@ -265,8 +267,8 @@ begin
          link_id & slot_id & crate_id & detector_id & version_id when (state=hdr0) else
          ts_reg(31 downto 0)  when (state=hdr1) else
          ts_reg(63 downto 32) when (state=hdr2) else
-         X"000000" & "00" & ch_id(5 downto 0) when (state=hdr3) else
-         X"DEADBEEF" when (state=hdr4) else
+         ("00" & trigsample & X"00" & "00" & ch_id(5 downto 0)) when (state=hdr3) else  -- trigger sample and channel ID
+         ("00" & baseline & "00" & threshold) when (state=hdr4) else -- average baseline and user-threshold
          (afe_dly0( 3 downto 0) & afe_dly1(13 downto 0) & afe_dly2(13 downto  0))                          when (state=dat0) else  -- sample2(3..0) & sample1(13..0) & sample0(13..0) 
          (afe_dly0( 7 downto 0) & afe_dly1(13 downto 0) & afe_dly2(13 downto  4))                          when (state=dat2) else  -- sample4(7..0) & sample3(13..0) & sample2(13..4) 
          (afe_dly0(11 downto 0) & afe_dly1(13 downto 0) & afe_dly2(13 downto  8))                          when (state=dat4) else  -- sample6(11..0) & sample5(13..0) & sample4(13..8) 
