@@ -293,6 +293,7 @@ architecture DAPHNE2_arch of DAPHNE2 is
         crate_id: in std_logic_vector(9 downto 0);
         detector_id: in std_logic_vector(5 downto 0);
         version_id: in std_logic_vector(5 downto 0);
+        st_enable: in std_logic_vector(39 downto 0); -- enable/disable channels for self-triggered sender only
         outmode: in std_logic_vector(7 downto 0); -- choose streaming or self-trig sender for each output
         threshold: in std_logic_vector(13 downto 0); -- for self-trig senders, threshold relative to average baseline
 
@@ -382,6 +383,9 @@ architecture DAPHNE2_arch of DAPHNE2 is
 
     signal threshold_reg : std_logic_vector(13 downto 0);
     signal threshold_we: std_logic;
+
+    signal st_enable_reg: std_logic_vector(39 downto 0);
+    signal st_enable_we: std_logic;
 
 begin
 
@@ -742,6 +746,7 @@ begin
                (X"000000000000" & "00" & threshold_reg(13 downto 0)) when std_match(rx_addr_reg, THRESHOLD_BASEADDR) else 
                (X"00000000000000" & outmode_reg(7 downto 0)) when std_match(rx_addr_reg, DAQ_OUTMODE_BASEADDR) else 
                (X"00000000000000" & "00" & inmux_dout(5 downto 0)) when std_match(rx_addr_reg, CORE_INMUX_ADDR) else
+               (X"000000" & st_enable_reg) when std_match(rx_addr_reg, ST_ENABLE_ADDR) else
 
                (others=>'0');
 
@@ -901,6 +906,23 @@ begin
         end if;
     end process thresh_proc;
 
+    -- register to enable or disable individual input channels for the self triggered sender
+    -- which is connected to all 40 input data channels. this 40 bit reg is R/W. this does NOT
+    -- apply to the four streaming senders, which use a more flexible muxing scheme on their inputs
+
+    st_enable_we <= '1' when (std_match(rx_addr,ST_ENABLE_ADDR) and rx_wren='1') else '0';
+
+    st_enable_proc: process(oeiclk)
+    begin
+        if rising_edge(oeiclk) then
+            if (reset_async='1') then
+                st_enable_reg <= DEFAULT_ST_ENABLE;
+            elsif (threshold_we='1') then
+                st_enable_reg <= rx_data(39 downto 0);
+            end if;
+        end if;
+    end process st_enable_proc;
+
     -- decode write enable for core inmux control register block of 40 6-bit registers
 
     inmux_we <= '1' when (std_match(rx_addr,CORE_INMUX_ADDR) and rx_wren='1') else '0';
@@ -923,6 +945,7 @@ begin
         crate_id => daq_out_param_reg(21 downto 12), -- 10 bits
         detector_id => daq_out_param_reg(11 downto 6), -- 6 bits
         version_id => daq_out_param_reg(5 downto 0), -- 6 bits
+        st_enable => st_enable_reg,
    
         oeiclk => oeiclk,
         trig => trig_sync,

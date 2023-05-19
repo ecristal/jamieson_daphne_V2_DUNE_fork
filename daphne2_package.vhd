@@ -28,7 +28,9 @@ package daphne2_package is
     type array_4x32_type is array (3 downto 0) of std_logic_vector(31 downto 0);
     type array_5x8_type is array (4 downto 0) of std_logic_vector(7 downto 0);
     type array_5x9_type is array (4 downto 0) of std_logic_vector(8 downto 0);
+    type array_8x4_type is array (7 downto 0) of std_logic_vector(3 downto 0);
     type array_8x14_type is array (7 downto 0) of std_logic_vector(13 downto 0);
+    type array_8x32_type is array (7 downto 0) of std_logic_vector(31 downto 0);
     type array_9x14_type is array (8 downto 0) of std_logic_vector(13 downto 0);
     type array_9x16_type is array (8 downto 0) of std_logic_vector(15 downto 0);
     type array_10x6_type is array (9 downto 0) of std_logic_vector(5 downto 0);
@@ -38,7 +40,9 @@ package daphne2_package is
     type array_4x4x14_type is array (3 downto 0) of array_4x14_type;
     type array_4x10x6_type is array (3 downto 0) of array_10x6_type;
     type array_4x10x14_type is array (3 downto 0) of array_10x14_type;
+    type array_5x8x4_type is array (4 downto 0) of array_8x4_type;
     type array_5x8x14_type is array (4 downto 0) of array_8x14_type;
+    type array_5x8x32_type is array (4 downto 0) of array_8x32_type;
     type array_5x9x14_type is array (4 downto 0) of array_9x14_type;
     type array_5x9x16_type is array (4 downto 0) of array_9x16_type;
 
@@ -97,16 +101,22 @@ package daphne2_package is
 
     constant EP_RST_ADDR: std_logic_vector(31 downto 0) := X"00004003";
 
-    -- choose which inputs are connected to each core sender. This is a block of 40 registers and is R/W
-    -- 0x5000 - 0x503F  this is technically 64 addresses but only the lower 40 are used here.
+    -- choose which inputs are connected to each streaming core sender.
+    -- This is a block of 16 registers and is R/W 0x5000 - 0x500F  
 
-    constant CORE_INMUX_ADDR: std_logic_vector(31 downto 0) := "00000000000000000101000000------";
+    constant CORE_INMUX_ADDR: std_logic_vector(31 downto 0) := "0000000000000000010100000000----";
 
     -- address of the threshold register for the self trig senders
 
     constant THRESHOLD_BASEADDR: std_logic_vector(31 downto 0) := X"00006000";
 
     constant DEFAULT_THRESHOLD: std_logic_vector(13 downto 0) := "00000100000000";
+
+    -- enable disable individual input channels for self triggered sender only
+
+    constant ST_ENABLE_ADDR: std_logic_vector(31 downto 0) := X"00006001";
+
+    constant DEFAULT_ST_ENABLE: std_logic_vector(39 downto 0) := X"0000000000"; -- all self triggered channels OFF 
 
     -- spy buffers are 4k deep
 

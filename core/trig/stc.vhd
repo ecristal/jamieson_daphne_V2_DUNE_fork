@@ -17,7 +17,7 @@ library unisim;
 use unisim.vcomponents.all;
 
 entity stc is
-generic( link_id: std_logic_vector(5 downto 0) := "000000" );
+generic( link_id: std_logic_vector(5 downto 0) := "000000"; ch_id: std_logic_vector(5 downto 0) := "000000" );
 port(
     reset: in std_logic;    
 
@@ -30,8 +30,8 @@ port(
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
 	afe_dat: in std_logic_vector(13 downto 0); -- aligned AFE data
-    ch_id: in std_logic_vector(5 downto 0); -- input channel id
-
+    enable: in std_logic;
+    
     fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
     fifo_rden: in std_logic;
     fifo_ae: out std_logic;
@@ -192,7 +192,7 @@ begin
                     when rst =>
                         state <= wait4trig;
                     when wait4trig => 
-                        if (triggered='1') then -- start assembling the output frame
+                        if (triggered='1' and enable='1') then -- start assembling the output frame
                             block_count <= "000000";
                             ts_reg <= timestamp;
                             state <= sof; 

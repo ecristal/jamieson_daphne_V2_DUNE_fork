@@ -2,8 +2,11 @@
 -- DAPHNE2 core logic
 --
 -- This core logic supports BOTH the SELF-TRIGGERED and STREAMING mode senders.
--- A flexible input mux (inmux) connects any input channel to the sender inputs
+-- A flexible input mux (inmux) connects any input channel to the streaming sender inputs
 -- the control registers that control the inmux selection are read/write
+--
+-- there is one self-triggered sender, and it is hard wired to all forty inputs and does not 
+-- use the flexble inmux layer
 --
 -- streaming and self-triggered senders are always present and active, but an output
 -- mux selects which sender drives the output links:
@@ -38,6 +41,7 @@ port(
     crate_id: in std_logic_vector(9 downto 0); -- used in output header
     detector_id: in std_logic_vector(5 downto 0); -- used in output header
     version_id: in std_logic_vector(5 downto 0); -- used in output header
+    st_enable: in std_logic_vector(39 downto 0); -- enable/disable channels for self-triggered sender only
 
     oeiclk: in std_logic; -- interface used for output spy buffer and to configure input mux
     trig: in std_logic; -- manually trigger output spy buffer
@@ -62,12 +66,12 @@ architecture core_arch of core is
         clock: in std_logic;
         reset: in std_logic;
         we: in std_logic;
-        addr: in std_logic_vector(5 downto 0);
+        addr: in std_logic_vector(3 downto 0);
         din: in std_logic_vector(5 downto 0);
         dout: out std_logic_vector(5 downto 0);    
         afe_dat: in array_5x9x14_type; -- AFE data synced to mclk
-        data_out: out array_4x10x14_type; -- AFE data out to the senders
-        chid_out: out array_4x10x6_type -- channel id outputs
+        data_out: out array_4x4x14_type; -- AFE data out to the senders
+        chid_out: out array_4x4x6_type -- channel id outputs
     );
     end component;
 
@@ -88,19 +92,19 @@ architecture core_arch of core is
         kout: out std_logic_vector( 3 downto 0));
     end component;
 
-    component st10_top -- 10 channel self-triggered sender
+    component st40_top -- 40 channel self-triggered sender
     generic( link_id: std_logic_vector(5 downto 0)  := "000000" );
     port(
         reset: in std_logic;    
-        threshold: in std_logic_vector(13 downto 0); -- user defined threshold over baseline
+        threshold: in std_logic_vector(13 downto 0); -- user defined threshold relative to baseline
         slot_id: in std_logic_vector(3 downto 0);
         crate_id: in std_logic_vector(9 downto 0);
         detector_id: in std_logic_vector(5 downto 0);
         version_id: in std_logic_vector(5 downto 0);
+        enable: in std_logic_vector(39 downto 0);
         aclk: in std_logic; -- AFE clock 62.500 MHz
         timestamp: in std_logic_vector(63 downto 0);
-    	afe_dat: in array_10x14_type; -- ten input streams
-        ch_id: in array_10x6_type; -- ten channel IDs
+    	afe_dat: in array_5x9x14_type; -- ADC data all 40 input streams
         fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
         dout: out std_logic_vector(31 downto 0);
         kout: out std_logic_vector(3 downto 0)
@@ -150,10 +154,12 @@ architecture core_arch of core is
     end component;
 
     signal fclk: std_logic_vector(3 downto 0);
-    signal mux_data: array_4x10x14_type;
-    signal mux_chid: array_4x10x6_type;
-    signal stream_sender_dout, selftrig_sender_dout, sender_dout: array_4x32_type; 
-    signal stream_sender_kout, selftrig_sender_kout, sender_kout: array_4x4_type;
+    signal mux_data: array_4x4x14_type;
+    signal mux_chid: array_4x4x6_type;
+    signal stream_sender_dout, sender_dout: array_4x32_type; 
+    signal stream_sender_kout, sender_kout: array_4x4_type;
+    signal selftrig_sender_dout: std_logic_vector(31 downto 0);
+    signal selftrig_sender_kout: std_logic_vector(3 downto 0);
     signal trig_fclk_reg: std_logic;
 
 begin
@@ -168,13 +174,13 @@ begin
         clock => oeiclk,
         reset => reset,
         we => inmux_we, -- R/W access to mux control registers
-        addr => addr(5 downto 0),
+        addr => addr(3 downto 0),
         din => din,
         dout => inmux_dout, 
 
         afe_dat => afe_dat, -- AFE raw data after alignment 
-        data_out => mux_data, -- afe data streams array_4x10x14
-        chid_out => mux_chid  -- input channel id array_4x10x6
+        data_out => mux_data, -- afe data streams array_4x4x14
+        chid_out => mux_chid  -- input channel id array_4x4x6
     );
 
     -- instantiate four streaming senders
@@ -206,29 +212,25 @@ begin
 
     end generate gen_stream_sender;
 
-    -- instantiate four 10-input self-triggered senders
+    -- instantiate ONE 40-input self-triggered sender
 
-    gen_selftrig_sender: for i in 3 downto 0 generate
-
-        st10_sender_inst: st10_top 
-        generic map( link_id => std_logic_vector(to_unsigned(i,6)) )
-        port map(
-            reset => reset,
-            threshold => threshold,
-            slot_id => slot_id,
-            crate_id => crate_id,
-            detector_id => detector_id,
-            version_id => version_id,
-            aclk => mclk,
-            timestamp => timestamp,
-        	afe_dat => mux_data(i),
-            ch_id => mux_chid(i),
-            fclk => fclk(i),
-            dout => selftrig_sender_dout(i),
-            kout => selftrig_sender_kout(i)
-        );
-
-    end generate gen_selftrig_sender;
+    st40_sender_inst: st40_top 
+    generic map( link_id => "000000" )
+    port map(
+        reset => reset,
+        threshold => threshold,
+        slot_id => slot_id,
+        crate_id => crate_id,
+        detector_id => detector_id,
+        version_id => version_id,
+        enable => st_enable,
+        aclk => mclk,
+        timestamp => timestamp,
+    	afe_dat => afe_dat, -- AFE raw data after alignment all 40 channels
+        fclk => fclk(0), 
+        dout => selftrig_sender_dout,
+        kout => selftrig_sender_kout
+    );
 
     -- there are four outputs (sender_kout and sender_dout) and these muxes 
     -- determine whether the streaming or self trig sender drives them. the muxes are controlled 
@@ -238,11 +240,11 @@ begin
     gen_outmux: for i in 3 downto 0 generate
     
         sender_kout(i) <= stream_sender_kout(i)   when (outmode((2*i)+1 downto 2*i)="10") else 
-                          selftrig_sender_kout(i) when (outmode((2*i)+1 downto 2*i)="11") else 
+                          selftrig_sender_kout when (outmode((2*i)+1 downto 2*i)="11") else 
                           "0001"; -- idle word
 
         sender_dout(i) <= stream_sender_dout(i)   when (outmode((2*i)+1 downto 2*i)="10") else 
-                          selftrig_sender_dout(i) when (outmode((2*i)+1 downto 2*i)="11") else 
+                          selftrig_sender_dout when (outmode((2*i)+1 downto 2*i)="11") else 
                           X"000000BC"; -- idle word
 
     end generate gen_outmux;
