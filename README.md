@@ -2,9 +2,12 @@
 
 ## Documentation
 
-Design documentation has been moved out of this README file and is now part of the Wiki pages associated with this repo:
+MOST of the design documentation has been moved out of this README file and is now part of the Wiki pages associated with this repo:
 
 <https://github.com/DUNE/daphne2_fpga/wiki>
+
+The exception to this is the memory map, which is very much tied to the design and therefore belongs IN the committed source files.
+See the file Memory_Map.md for details.
 
 ## Discussion
 
