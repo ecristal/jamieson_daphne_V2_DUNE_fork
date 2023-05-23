@@ -57,6 +57,10 @@ set_false_path -from [get_pins test_reg_reg[*]/C]
 set_false_path -from [get_ports gbe_sfp_??s]
 set_false_path -from [get_ports cdr_sfp_??s]
 set_false_path -from [get_ports daq?_sfp_??s]
+set_false_path -from [get_pins st_enable_reg_reg[*]/C]
+set_false_path -from [get_pins outmode_reg_reg[*]/C]
+set_false_path -from [get_pins threshold_reg_reg[*]/C]
+set_false_path -from [get_pins daq_out_param_reg_reg[*]/C]
 
 # #############################################################################
 # Pin LOCation and IOSTANDARD Constraints...
