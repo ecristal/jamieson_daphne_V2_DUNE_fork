@@ -917,7 +917,7 @@ begin
         if rising_edge(oeiclk) then
             if (reset_async='1') then
                 st_enable_reg <= DEFAULT_ST_ENABLE;
-            elsif (threshold_we='1') then
+            elsif (st_enable_we='1') then
                 st_enable_reg <= rx_data(39 downto 0);
             end if;
         end if;
