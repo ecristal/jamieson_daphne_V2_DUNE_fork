@@ -17,7 +17,7 @@ end stc_testbench;
 architecture stc_testbench_arch of stc_testbench is
 
 component stc is
-generic( link_id: std_logic_vector(5 downto 0) := "000000" );
+generic( link_id: std_logic_vector(5 downto 0) := "000000"; ch_id: std_logic_vector(5 downto 0) := "000000" );
 port(
     reset: in std_logic;
 
@@ -30,7 +30,7 @@ port(
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
 	afe_dat: in std_logic_vector(13 downto 0);
-    ch_id: in std_logic_vector(5 downto 0);
+    enable: in std_logic;
 
     fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
     fifo_rden: in std_logic;
@@ -97,8 +97,7 @@ begin
 end process waveform_proc;
 
 DUT: stc
-generic map(
-    link_id => "000000" )
+generic map( link_id => "000001", ch_id => "000011" )
 port map(
     reset => reset,
 
@@ -111,7 +110,7 @@ port map(
     aclk => aclk,
     timestamp => timestamp,
 	afe_dat => afe_dat,
-    ch_id => "000011",
+    enable => '1',
 
     fclk => fclk,
     fifo_rden => '0'

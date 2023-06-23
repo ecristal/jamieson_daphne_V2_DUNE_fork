@@ -318,7 +318,7 @@ begin
                  '1' when (state=trailer) else
                  '0';
 
-    crc_reset <= '1' when (state=sof) else '0'; -- reset the CRC generator just prior to the output record generation
+    crc_reset <= '1' when (state=wait4trig) else '0'; -- change from SOF to idle/wait4trig to be consistant with streaming output (which works!)
 
     crc_inst: CRC_OL
        generic map (Nbits => 32, CRC_Width => 20, G_Poly => X"8359f", G_InitVal => X"FFFFF")
