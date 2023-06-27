@@ -55,20 +55,21 @@ architecture st10_top_arch of st10_top is
     signal k, kout_reg: std_logic_vector( 3 downto 0);
 
     component stc is
-    generic( link_id: std_logic_vector(5 downto 0) := "000000" );
+    generic( link_id: std_logic_vector(5 downto 0) := "000000"; ch_id: std_logic_vector(5 downto 0) := "000000" );
     port(
         reset: in std_logic;
 
-        threshold: std_logic_vector(13 downto 0);
-        slot_id: std_logic_vector(3 downto 0);
-        crate_id: std_logic_vector(9 downto 0);
-        detector_id: std_logic_vector(5 downto 0);
-        version_id: std_logic_vector(5 downto 0);
-
+        threshold: in std_logic_vector(13 downto 0);
+        slot_id: in std_logic_vector(3 downto 0);
+        crate_id: in std_logic_vector(9 downto 0);
+        detector_id: in std_logic_vector(5 downto 0);
+        version_id: in std_logic_vector(5 downto 0);
+		enable: in std_logic;
+		
         aclk: in std_logic; -- AFE clock 62.500 MHz
         timestamp: in std_logic_vector(63 downto 0);
     	afe_dat: in std_logic_vector(13 downto 0);
-        ch_id: in std_logic_vector(5 downto 0);
+        --ch_id: in std_logic_vector(5 downto 0);
         fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
         fifo_rden: in std_logic;
         fifo_ae: out std_logic;
@@ -84,7 +85,7 @@ begin
     gen_stc: for i in 9 downto 0 generate
 
         stc_inst: stc 
-        generic map( link_id => link_id ) 
+        generic map( link_id => link_id, ch_id => std_logic_vector(to_unsigned(i,6)) ) 
         port map(
             reset => reset,
 
@@ -97,7 +98,7 @@ begin
             aclk => aclk,
             timestamp => timestamp,
         	afe_dat => afe_dat(i),
-            ch_id => ch_id(i),
+            enable => '1',
             fclk => fclk,
             fifo_rden => fifo_rden(i),
             fifo_ae => fifo_ae(i),

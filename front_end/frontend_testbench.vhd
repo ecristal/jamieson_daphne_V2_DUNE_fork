@@ -31,19 +31,20 @@ port(
     afe_clk_n:  out std_logic;
     clock:   in  std_logic; -- master clock 62.5MHz
     clock7x: in  std_logic; -- 7 x master clock = 437.5MHz
-    sclk:    in  std_logic; -- 200MHz system clock, constant
-    reset:   in  std_logic;
+    sclk200: in  std_logic; -- 200MHz system clock, constant
+	reset_clock: in  std_logic;
+	reset_sclk200: in  std_logic;
     done:    out std_logic_vector(4 downto 0); -- status of automatic alignment FSM
     dout:    out array_5x9x14_type -- data synchronized to clock
   );
 end component;
 
-constant sclk_period:   time := 5.0ns;   -- 200 MHz
+constant sclk200_period:   time := 5.0ns;   -- 200 MHz
 constant aclk_period:   time := 16.0ns;  -- 62.5 MHz
 constant aclk7x_period: time := 2.285ns; -- 62.5 MHz * 7 = 437.5MHz
 
 signal reset: std_logic := '1';
-signal sclk, aclk, aclk7x: std_logic := '0';
+signal sclk200, aclk, aclk7x: std_logic := '0';
 
 signal afe_p, afe_n: array_5x9_type;
 signal clkadc_p, clkadc_n: std_logic;
@@ -54,7 +55,7 @@ reset <= '1', '0' after 96ns;
 
 -- make tha clocks
 
-sclk <= not sclk after sclk_period/2;
+sclk200 <= not sclk200 after sclk200_period/2;
 
 aclk <= not aclk after aclk_period/2; 
 
@@ -89,8 +90,9 @@ port map(
     afe_clk_n => clkadc_n,
     clock => aclk,
     clock7x => aclk7x,
-    sclk => sclk,
-    reset => reset
+    sclk200 => sclk200,
+    reset_sclk200 => reset,
+	reset_clock => reset
   );
 
 end frontend_testbench_arch;

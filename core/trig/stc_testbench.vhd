@@ -48,6 +48,17 @@ signal fclk: std_logic := '0';
 
 constant threshold: std_logic_vector(13 downto 0) := "00000100000000";
 
+
+type state_type is (idle, dump);
+signal state: state_type;
+
+signal ae: std_logic;
+signal rden: std_logic := '0';
+signal d: std_logic_vector(31 downto 0);
+signal k: std_logic_vector(3 downto 0);
+
+file file_handler : text open write_mode is "output.txt";
+
 begin
 
 aclk <= not aclk after 8.000 ns; --  62.500 MHz
@@ -66,32 +77,48 @@ begin
 
     -- establish baseline level mid scale ish
 
-    afe_dat <= "10000000000000";
+    afe_dat <= std_logic_vector( to_unsigned(8000,14) );
     wait for 1000ns;
-    afe_dat <= "10000000000011";
+    afe_dat <= std_logic_vector( to_unsigned(8001,14) );
     wait for 1000ns;
-    afe_dat <= "10000000000001";
+    afe_dat <= std_logic_vector( to_unsigned(8002,14) );
     wait for 1000ns;
-    afe_dat <= "10000000000111";
+    afe_dat <= std_logic_vector( to_unsigned(8001,14) );
     wait for 1000ns;
-    afe_dat <= "10000000001111";
+    afe_dat <= std_logic_vector( to_unsigned(8000,14) );
     wait for 1000ns;
 
-    -- here's the fast pulse -- this is a positive pulse, but we should make this negative...
+    -- BOOM here's the pulse -- fast falling edge!
 
     wait until falling_edge(aclk);
-    afe_dat <= "11111011100001";
+    afe_dat <= std_logic_vector( to_unsigned(5000,14) );
     wait until falling_edge(aclk);
-    afe_dat <= "11111010110111";
+    afe_dat <= std_logic_vector( to_unsigned(3000,14) );
     wait until falling_edge(aclk);
-    afe_dat <= "11111101011011";
+    afe_dat <= std_logic_vector( to_unsigned(2000,14) );
+	
+	-- now a slow rise back up to baseline....
+	
     wait until falling_edge(aclk);
-    afe_dat <= "10000001110101";
-
-    -- return to baseline level 
-
+    afe_dat <= std_logic_vector( to_unsigned(5000,14) );
     wait until falling_edge(aclk);
-    afe_dat <= "10000000000000";
+    afe_dat <= std_logic_vector( to_unsigned(6000,14) );
+    wait until falling_edge(aclk);
+    afe_dat <= std_logic_vector( to_unsigned(6500,14) );
+    wait until falling_edge(aclk);
+    afe_dat <= std_logic_vector( to_unsigned(6800,14) );
+    wait until falling_edge(aclk);
+    afe_dat <= std_logic_vector( to_unsigned(7000,14) );
+    wait until falling_edge(aclk);
+    afe_dat <= std_logic_vector( to_unsigned(7200,14) );
+    wait until falling_edge(aclk);
+    afe_dat <= std_logic_vector( to_unsigned(7500,14) );
+    wait until falling_edge(aclk);
+    afe_dat <= std_logic_vector( to_unsigned(7700,14) );
+    wait until falling_edge(aclk);
+    afe_dat <= std_logic_vector( to_unsigned(7900,14) );
+    wait until falling_edge(aclk);
+    afe_dat <= std_logic_vector( to_unsigned(8000,14) );
     wait;
 
 end process waveform_proc;
@@ -113,7 +140,49 @@ port map(
     enable => '1',
 
     fclk => fclk,
-    fifo_rden => '0'
+    fifo_rden => rden,
+    fifo_ae => ae,
+    fifo_do => d,
+    fifo_ko => k
 );
+
+-- wait until the output FIFO has an event, now pull it out and write to file
+
+dump_proc: process(fclk)
+variable row : line;
+begin
+    if rising_edge(fclk) then
+
+        case(state) is
+
+            when idle =>
+                if (ae='1') then -- start reading...
+                    state <= dump;
+                    rden <= '1';
+                else
+                    state <= idle;
+                end if;
+
+            when dump =>
+                if (k="0001" and d(7 downto 0)=X"DC") then -- this the EOF word, done reading from std output fifo
+                    state <= idle;
+                    rden <= '0';
+                    hwrite(row, d); -- get that last line
+                    writeline(file_handler, row);
+                else
+                    state <= dump;
+                    hwrite(row, d);
+                    writeline(file_handler, row);
+                end if;
+
+            when others =>
+                state <= idle;
+
+        end case;
+    end if;
+end process dump_proc;
+
+
+
 
 end stc_testbench_arch;

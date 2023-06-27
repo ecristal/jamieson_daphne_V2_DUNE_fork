@@ -324,7 +324,7 @@ begin
        generic map (Nbits => 32, CRC_Width => 20, G_Poly => X"8359f", G_InitVal => X"FFFFF")
        port map(
          reset => crc_reset,
-         clk => fclk,
+         clk => aclk,
          calc => crc_calc,
          din => d,
          crc => crc20);
