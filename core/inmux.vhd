@@ -47,13 +47,13 @@ begin
         process(clock)
         begin
             if rising_edge(clock) then
-                if ( we='1' and addr=std_logic_vector(to_unsigned(4*s+c,6)) ) then
+                if ( we='1' and addr=std_logic_vector(to_unsigned(4*s+c,4)) ) then
                     select_reg(s)(c) <= din;
                 end if;
             end if;
         end process;
 
-        dout <= select_reg(s)(c) when ( addr=std_logic_vector(to_unsigned(4*s+c,6)) ) else "ZZZZZZ";
+        dout <= select_reg(s)(c) when ( addr=std_logic_vector(to_unsigned(4*s+c,4)) ) else "ZZZZZZ";
 
         end generate gen_chan;
     end generate gen_sender;
