@@ -88,6 +88,11 @@ begin
     afe_dat <= std_logic_vector( to_unsigned(8000,14) );
     wait for 1000ns;
 
+    for i in 1 to 100 loop
+        wait until falling_edge(aclk);
+        afe_dat <= std_logic_vector( to_unsigned(8000+i,14) );
+    end loop;
+
     -- BOOM here's the pulse -- fast falling edge!
 
     wait until falling_edge(aclk);

@@ -194,7 +194,7 @@ begin
                     when wait4trig => 
                         if (triggered='1' and enable='1') then -- start assembling the output frame
                             block_count <= "000000";
-                            ts_reg <= timestamp;
+                            ts_reg <= std_logic_vector( unsigned(timestamp) - 124 );
                             state <= sof; 
                         else
                             state <= wait4trig;
