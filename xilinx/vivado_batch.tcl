@@ -151,7 +151,7 @@ report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/
 
 # route...
 
-route_design -directive HigherDelayCost
+route_design -directive NoTimingRelaxation
 # write_checkpoint -force $outputDir/post_route
 
 # generate reports...
