@@ -153,6 +153,7 @@ begin
               X"6D" when (user_addr=X"10") else  --           109
               X"6F" when (user_addr=X"12") else  --           111
               X"70" when (user_addr=X"13") else  --           112
+              X"71" when (user_addr=X"14") else  --           113
               X"64";  -- 10.73.137.100 for all other cases
 
    ec_wrapper : entity work.ethernet_controller_wrapper
