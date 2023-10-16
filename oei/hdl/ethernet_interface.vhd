@@ -159,6 +159,7 @@ begin
 
 	-- change the upper three bytes of the address based on the user_addr efuse value
 	-- user_addr = 0x11 is board serial number 7 for use at fermilab only and it uses 192.168.121.40
+	-- this is kludgy af
 
 	self_addr <= X"C0A879" when (user_addr=X"11") else X"0A4989"; -- 192.168.121.x else 10.73.137.x; 
 
@@ -175,9 +176,9 @@ begin
 				
                 reset=>reset,	
 										   	   
-                self_addr(31 downto 8)=>self_addr,
+                self_addr(31 downto 8) => self_addr,
 				-- self_addr(7 downto 0)=>user_addr_sig,
-                self_addr(7 downto 0)=>new_ip, -- remapped IP address JTO
+                self_addr(7 downto 0) => new_ip, -- remapped IP address JTO
                 self_mac(47 downto 8)=>self_mac,	  				  
                 self_mac(7 downto 0)=>user_addr_sig,	  
                 self_port=>self_port,	  
@@ -310,7 +311,7 @@ begin
 			if ( ots_wren = '1' and  				-- WRITE eth ===========
 				 ots_block_sel = 1) then -- Ethernet block address space
 				if ( ots_block_addr = 0 ) then 
-					 self_addr <= ots_din(23 downto 0); 
+					 -- self_addr <= ots_din(23 downto 0); -- remote ip addr change mechanism disabled JTO
 					 arp_announce <= '1';
 				elsif ( ots_block_addr = 1 ) then 
 					 user_addr_byte <= ots_din(7 downto 0); 
@@ -336,7 +337,7 @@ begin
 			elsif ( internal_we = '1' and  				-- WRITE internal ===========
 				 unsigned(internal_block_sel) = 1) then -- Ethernet block address space
 				if ( unsigned(internal_addr) = 0 ) then 
-					 self_addr <= internal_din(23 downto 0); 
+					 -- self_addr <= internal_din(23 downto 0); -- remote ip addr change mechanism disabled JTO
 					 arp_announce <= '1';
 				elsif ( unsigned(internal_addr) = 1 ) then 
 					 user_addr_byte <= internal_din(7 downto 0); 
