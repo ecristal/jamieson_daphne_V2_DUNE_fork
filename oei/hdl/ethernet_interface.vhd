@@ -151,10 +151,16 @@ begin
               X"69" when (user_addr=X"0C") else  --           105
               X"6B" when (user_addr=X"0E") else  --           107
               X"6D" when (user_addr=X"10") else  --           109
+              X"28" when (user_addr=X"11") else  --           40 fermi special 
               X"6F" when (user_addr=X"12") else  --           111
               X"70" when (user_addr=X"13") else  --           112
               X"71" when (user_addr=X"14") else  --           113
               X"64";  -- 10.73.137.100 for all other cases
+
+	-- change the upper three bytes of the address based on the user_addr efuse value
+	-- user_addr = 0x11 is board serial number 7 for use at fermilab only and it uses 192.168.121.40
+
+	self_addr <= X"C0A879" when (user_addr=X"11") else X"0A4989"; -- 192.168.121.x else 10.73.137.x; 
 
    ec_wrapper : entity work.ethernet_controller_wrapper
       port map (
