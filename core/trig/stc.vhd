@@ -49,7 +49,8 @@ architecture stc_arch of stc is
     type state_type is (rst, wait4trig, 
                         sof, hdr0, hdr1, hdr2, hdr3, hdr4, 
                         dat0, dat1, dat2, dat3, dat4, dat5, dat6, dat7, dat8, dat9, dat10, dat11, dat12, dat13, dat14, dat15, 
-                        trailer, eof);
+                        trailer1, trailer2, trailer3, trailer4, trailer5, trailer6, 
+                        trailer7, trailer8, trailer9, trailer10, trailer11, trailer12, trailer13, eof);
     signal state: state_type;
 
     signal d: std_logic_vector(31 downto 0);
@@ -243,12 +244,36 @@ begin
                         state <= dat15;
                     when dat15 =>
                         if (block_count="111111") then -- we have cycled through the data block (16 samples per block) 64 times, done
-                            state <= trailer;
+                            state <= trailer1;
                         else
                             block_count <= std_logic_vector(unsigned(block_count) + 1);
                             state <= dat0;
                         end if;
-                    when trailer =>
+                    when trailer1 =>
+                        state <= trailer2;
+                    when trailer2 =>
+                        state <= trailer3;
+                    when trailer3 =>
+                        state <= trailer4;
+                    when trailer4 =>
+                        state <= trailer5;
+                    when trailer5 =>
+                        state <= trailer6;
+                    when trailer6 =>
+                        state <= trailer7;
+                    when trailer7 =>
+                        state <= trailer8;
+                    when trailer8 =>
+                        state <= trailer9;
+                    when trailer9 =>
+                        state <= trailer10;
+                    when trailer10 =>
+                        state <= trailer11;
+                    when trailer11 =>
+                        state <= trailer12;
+                    when trailer12 =>
+                        state <= trailer13;
+                    when trailer13 =>
                         state <= eof;
                     when eof =>
                         state <= wait4trig;
@@ -276,7 +301,19 @@ begin
          (afe_dly0( 5 downto 0) & afe_dly1(13 downto 0) & afe_dly2(13 downto  2))                          when (state=dat9) else  -- sample11(5..0) & sample10(13..0) & sample9(13..2)
          (afe_dly0( 9 downto 0) & afe_dly1(13 downto 0) & afe_dly2(13 downto  6))                          when (state=dat11) else -- sample13(9..0) & sample12(13..0) & sample11(13..6)
          (afe_dly0(13 downto 0) & afe_dly1(13 downto 0) & afe_dly2(13 downto 10))                          when (state=dat13) else -- sample15(13..0) & sample14(13..0) & sample13(13..10)
-         X"FFFFFFFF" when (state=trailer) else -- OR indicate some overflow condition here!?
+         X"00000000" when (state=trailer1) else 
+         X"00000000" when (state=trailer2) else 
+         X"00000000" when (state=trailer3) else 
+         X"00000000" when (state=trailer4) else 
+         X"00000000" when (state=trailer5) else 
+         X"00000000" when (state=trailer6) else 
+         X"00000000" when (state=trailer7) else 
+         X"00000000" when (state=trailer8) else 
+         X"00000000" when (state=trailer9) else 
+         X"00000000" when (state=trailer10) else 
+         X"00000000" when (state=trailer11) else 
+         X"00000000" when (state=trailer12) else 
+         X"FFFFFFFF" when (state=trailer13) else
          "0000" & crc20 & X"DC" when (state=eof) else -- "0000" & CRC[19..0] & K28.6
          X"00000000"; 
 
@@ -297,7 +334,19 @@ begin
                  '1' when (state=dat9) else
                  '1' when (state=dat11) else
                  '1' when (state=dat13) else
-                 '1' when (state=trailer) else
+                 '1' when (state=trailer1) else
+                 '1' when (state=trailer2) else
+                 '1' when (state=trailer3) else
+                 '1' when (state=trailer4) else
+                 '1' when (state=trailer5) else
+                 '1' when (state=trailer6) else
+                 '1' when (state=trailer7) else
+                 '1' when (state=trailer8) else
+                 '1' when (state=trailer9) else
+                 '1' when (state=trailer10) else
+                 '1' when (state=trailer11) else
+                 '1' when (state=trailer12) else
+                 '1' when (state=trailer13) else
                  '1' when (state=eof) else
                  '0';
 
@@ -315,7 +364,19 @@ begin
                  '1' when (state=dat9) else
                  '1' when (state=dat11) else
                  '1' when (state=dat13) else
-                 '1' when (state=trailer) else
+                 '1' when (state=trailer1) else
+                 '1' when (state=trailer2) else
+                 '1' when (state=trailer3) else
+                 '1' when (state=trailer4) else
+                 '1' when (state=trailer5) else
+                 '1' when (state=trailer6) else
+                 '1' when (state=trailer7) else
+                 '1' when (state=trailer8) else
+                 '1' when (state=trailer9) else
+                 '1' when (state=trailer10) else
+                 '1' when (state=trailer11) else
+                 '1' when (state=trailer12) else
+                 '1' when (state=trailer13) else
                  '0';
 
     crc_reset <= '1' when (state=wait4trig) else '0'; -- change from SOF to idle/wait4trig to be consistant with streaming output (which works!)
