@@ -869,7 +869,7 @@ begin
             if (reset_async='1') then
                 daq_out_param_reg <= (DEFAULT_DAQ_OUT_SLOT_ID & DEFAULT_DAQ_OUT_CRATE_ID & DEFAULT_DAQ_OUT_DETECTOR_ID & DEFAULT_DAQ_OUT_VERSION_ID);
             elsif (daq_out_param_we='1') then
-                daq_out_param_reg <= rx_data(25 downto 0);
+                daq_out_param_reg <= (rx_data(25 downto 6) & DEFAULT_DAQ_OUT_VERSION_ID);
             end if;
         end if;
     end process misc_outlink_stuff_proc;

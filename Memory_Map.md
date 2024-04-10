@@ -28,12 +28,12 @@
 	0x00002013  Number of errors observed for AFE3 frame marker, stops at 255.
 	0x00002014  Number of errors observed for AFE4 frame marker, stops at 255.
 
-	0x00003000  Output record header parameters, read-write, 26 bits defined as:
+	0x00003000  Output record header parameters, read-write, bits 25 to 6, bits 5 to 0 are read only, 26 bits defined as:
 
 			bits 25..22 = slot_id(3..0), default "0010"
 			bits 21..12 = crate_id(9..0), default is "0000000001"
 			bits 11..6  = detector_id(5..0), default is "000010"
-			bits 5..0   = version_id(5..0), default is "000001"
+			bits 5..0   = version_id(5..0), default is "000010"
 				
 	0x00003001  Output link control byte. used to select streaming or self triggered mode sender, 
 			or idle. This register defaults to 0, all output links idle. When an output link 
