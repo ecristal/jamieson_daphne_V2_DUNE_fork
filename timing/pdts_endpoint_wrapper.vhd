@@ -39,7 +39,7 @@ component pdts_endpoint is
 		FORCE_TX: boolean := false; -- Turn on transmit permanently
 		SKIP_FREQ: boolean := false; -- Skip the frequency check step (e.g. for simulation)
 		EXT_ADDR: boolean := true; -- Skip the address setting step
-		SKIP_DESKEW: boolean := false; -- Skip the phase adjustment step
+		SKIP_DESKEW: boolean := true; -- Skip the phase adjustment step
 		SKIP_TSTAMP: boolean := false -- Skip the timestamp initialisation step
 	);
 	port(
@@ -78,7 +78,7 @@ pdts_endpoint_inst: pdts_endpoint
 		FORCE_TX => false, -- Turn on transmit permanently, don't do this....!
 		SKIP_FREQ => false, -- Skip the frequency check step (e.g. for simulation)
 		EXT_ADDR => true, -- Skip the address setting step
-		SKIP_DESKEW => false, -- Skip the phase adjustment step
+		SKIP_DESKEW => true, -- Skip the phase adjustment step
 		SKIP_TSTAMP => false )
 	port map(
 		sys_clk => sys_clk, -- System clock
