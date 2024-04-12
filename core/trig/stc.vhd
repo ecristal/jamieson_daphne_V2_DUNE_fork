@@ -26,7 +26,8 @@ port(
     detector_id: std_logic_vector(5 downto 0);
     version_id: std_logic_vector(5 downto 0);
     threshold: std_logic_vector(13 downto 0); -- trig threshold relative to calculated baseline
-     
+    ti_trigger: in std_logic_vector(7 downto 0); -------------------------
+    ti_trigger_stbr: in std_logic;  -------------------------
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
 	afe_dat: in std_logic_vector(13 downto 0); -- aligned AFE data
@@ -81,8 +82,10 @@ architecture stc_arch of stc is
         din: in std_logic_vector(13 downto 0);
         baseline: in std_logic_vector(13 downto 0);
         threshold: in std_logic_vector(13 downto 0);
-        triggered: out std_logic;
-        trigsample: out std_logic_vector(13 downto 0));
+        triggered: out std_logic;        
+        trigsample: out std_logic_vector(13 downto 0);
+        ti_trigger: in std_logic_vector(7 downto 0); -------------------------
+        ti_trigger_stbr: in std_logic);  -------------------------
     end component;
 
     component CRC_OL is
@@ -178,7 +181,9 @@ begin
          baseline => baseline,
          threshold => threshold,
          triggered => triggered,
-         trigsample => trigsample -- the ADC sample that caused the trigger 
+         trigsample => trigsample, -- the ADC sample that caused the trigger 
+         ti_trigger => ti_trigger,
+         ti_trigger_stbr => ti_trigger_stbr
     );        
 
     -- FSM waits for trigger condition then assembles output frame and stores into FIFO
