@@ -96,7 +96,7 @@ begin
                 crate_id => crate_id,
                 detector_id => detector_id,
                 version_id => version_id,
-                enable => enable(5*a+c),
+                enable => enable(8*a+c),
     
                 aclk => aclk,
                 timestamp => timestamp,
