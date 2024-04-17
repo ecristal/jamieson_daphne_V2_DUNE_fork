@@ -85,7 +85,7 @@ begin
         gen_stc_c: for c in 7 downto 0 generate
 
             stc_inst: stc 
-            generic map( link_id => link_id, ch_id => std_logic_vector(to_unsigned(5*a+c,6)) ) 
+            generic map( link_id => link_id, ch_id => std_logic_vector(to_unsigned(10*a+c,6)) ) 
             port map(
                 reset => reset,
     
