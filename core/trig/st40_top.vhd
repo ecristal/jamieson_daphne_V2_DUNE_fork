@@ -19,6 +19,8 @@ port(
     reset: in std_logic;
 
     threshold: in std_logic_vector(13 downto 0); -- user defined threshold relative to avg baseline
+    ti_trigger: in std_logic_vector(7 downto 0); -------------------------
+    ti_trigger_stbr: in std_logic;  -------------------------
     slot_id: in std_logic_vector(3 downto 0);
     crate_id: in std_logic_vector(9 downto 0);
     detector_id: in std_logic_vector(5 downto 0);
@@ -64,7 +66,9 @@ architecture st40_top_arch of st40_top is
 
         aclk: in std_logic; -- AFE clock 62.500 MHz
         timestamp: in std_logic_vector(63 downto 0);
-    	afe_dat: in std_logic_vector(13 downto 0);
+    	ti_trigger: in std_logic_vector(7 downto 0); -------------------------
+        ti_trigger_stbr: in std_logic;  -------------------------
+        afe_dat: in std_logic_vector(13 downto 0);
         fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
         fifo_rden: in std_logic;
         fifo_ae: out std_logic;
@@ -81,16 +85,18 @@ begin
         gen_stc_c: for c in 7 downto 0 generate
 
             stc_inst: stc 
-            generic map( link_id => link_id, ch_id => std_logic_vector(to_unsigned(5*a+c,6)) ) 
+            generic map( link_id => link_id, ch_id => std_logic_vector(to_unsigned(10*a+c,6)) ) 
             port map(
                 reset => reset,
     
                 threshold => threshold,
+                ti_trigger => ti_trigger, -------------------------
+                ti_trigger_stbr => ti_trigger_stbr,  -------------------------
                 slot_id => slot_id,
                 crate_id => crate_id,
                 detector_id => detector_id,
                 version_id => version_id,
-                enable => enable(5*a+c),
+                enable => enable(8*a+c),
     
                 aclk => aclk,
                 timestamp => timestamp,

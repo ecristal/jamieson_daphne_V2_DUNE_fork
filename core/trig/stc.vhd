@@ -26,7 +26,8 @@ port(
     detector_id: std_logic_vector(5 downto 0);
     version_id: std_logic_vector(5 downto 0);
     threshold: std_logic_vector(13 downto 0); -- trig threshold relative to calculated baseline
-     
+    ti_trigger: in std_logic_vector(7 downto 0); -------------------------
+    ti_trigger_stbr: in std_logic;  -------------------------
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
 	afe_dat: in std_logic_vector(13 downto 0); -- aligned AFE data
@@ -81,8 +82,10 @@ architecture stc_arch of stc is
         din: in std_logic_vector(13 downto 0);
         baseline: in std_logic_vector(13 downto 0);
         threshold: in std_logic_vector(13 downto 0);
-        triggered: out std_logic;
-        trigsample: out std_logic_vector(13 downto 0));
+        triggered: out std_logic;        
+        trigsample: out std_logic_vector(13 downto 0);
+        ti_trigger: in std_logic_vector(7 downto 0); -------------------------
+        ti_trigger_stbr: in std_logic);  -------------------------
     end component;
 
     component CRC_OL is
@@ -178,7 +181,9 @@ begin
          baseline => baseline,
          threshold => threshold,
          triggered => triggered,
-         trigsample => trigsample -- the ADC sample that caused the trigger 
+         trigsample => trigsample, -- the ADC sample that caused the trigger 
+         ti_trigger => ti_trigger,
+         ti_trigger_stbr => ti_trigger_stbr
     );        
 
     -- FSM waits for trigger condition then assembles output frame and stores into FIFO
@@ -301,18 +306,18 @@ begin
          (afe_dly0( 5 downto 0) & afe_dly1(13 downto 0) & afe_dly2(13 downto  2))                          when (state=dat9) else  -- sample11(5..0) & sample10(13..0) & sample9(13..2)
          (afe_dly0( 9 downto 0) & afe_dly1(13 downto 0) & afe_dly2(13 downto  6))                          when (state=dat11) else -- sample13(9..0) & sample12(13..0) & sample11(13..6)
          (afe_dly0(13 downto 0) & afe_dly1(13 downto 0) & afe_dly2(13 downto 10))                          when (state=dat13) else -- sample15(13..0) & sample14(13..0) & sample13(13..10)
-         X"00000000" when (state=trailer1) else 
-         X"00000000" when (state=trailer2) else 
-         X"00000000" when (state=trailer3) else 
-         X"00000000" when (state=trailer4) else 
-         X"00000000" when (state=trailer5) else 
-         X"00000000" when (state=trailer6) else 
-         X"00000000" when (state=trailer7) else 
-         X"00000000" when (state=trailer8) else 
-         X"00000000" when (state=trailer9) else 
-         X"00000000" when (state=trailer10) else 
-         X"00000000" when (state=trailer11) else 
-         X"00000000" when (state=trailer12) else 
+         X"A8A7A6A5" when (state=trailer1) else -- X"00000000"
+         X"A4A3A2A1" when (state=trailer2) else -- X"00000000"
+         X"B8B7B6B5" when (state=trailer3) else -- X"00000000"
+         X"B4B3B2B1" when (state=trailer4) else -- X"00000000"
+         X"C8C7C6C5" when (state=trailer5) else -- X"00000000"
+         X"C4C3C2C1" when (state=trailer6) else -- X"00000000"
+         X"D8D7D6D5" when (state=trailer7) else -- X"00000000"
+         X"D4D3D2D1" when (state=trailer8) else -- X"00000000"
+         X"E8E7E6E5" when (state=trailer9) else -- X"00000000"
+         X"E4E3E2E1" when (state=trailer10) else -- X"00000000"
+         X"F8F7F6F5" when (state=trailer11) else -- X"00000000"
+         X"F4F3F2F1" when (state=trailer12) else -- X"00000000"
          X"FFFFFFFF" when (state=trailer13) else
          "0000" & crc20 & X"DC" when (state=eof) else -- "0000" & CRC[19..0] & K28.6
          X"00000000"; 
