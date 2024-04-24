@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # uccmd.py -- send a command to the microcontroller and read the response
 # uses the new SPI slave firmware. Python 3.
 

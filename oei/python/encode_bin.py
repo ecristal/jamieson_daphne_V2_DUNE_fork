@@ -33,10 +33,10 @@ class binfile(object):
     return self.pages + int(self.header)
 
   def more(self):
-    return (self.current_page+1) < self.pages + int(self.header)
+    return (self.current_page+1) < self.pages + self.page_offset + int(self.header)
 
   def next(self):
-    page = self.file.tell()//256+ self.page_offset + int(self.header)
+    page = self.file.tell()//256 + self.page_offset + int(self.header)
     self.current_page = page
     pagedata = self.file.read(256)
     if pagedata == b'':
@@ -49,10 +49,10 @@ class binfile(object):
  
   def page(self,pageno):
     if self.header:
-      if pageno == 0:
+      if pageno == self.page_offset:
         return self.HeaderWriteCmd()
       else:
-        pageno = pageno-1
+        pageno = pageno-(self.page_offset + int(self.header))
     if pageno<self.pages:
       self.file.seek(pageno*256)
       return self.next()
@@ -61,7 +61,7 @@ class binfile(object):
  
   def reset(self):
     self.file.seek(0)
-      
+    self.current_page = 0
 
   def getHash(self):
     startpos = self.file.tell()
@@ -87,8 +87,8 @@ class binfile(object):
     return gitsha.to_bytes(4,'big')
 
   def getPageRange(self):
-    firstPage = self.page_offset + 1
-    lastPage = self.page_offset + self.pages
+    firstPage = self.page_offset + int(self.header)
+    lastPage = self.page_offset + self.pages # this is the last page, and the header is at 0, so this is correct.
     return firstPage.to_bytes(4,'big')+lastPage.to_bytes(4,'big')
   
   def getValidMarker(self):
