@@ -3,24 +3,6 @@
 #
 # vivado -mode tcl -source vivado_batch.tcl
 
-proc check_timing_constraints {timing_summary_file} {
-    # Open the timing summary file for reading
-    set summary [open $timing_summary_file r]
-
-    # Read the contents of the file
-    set contents [read $summary]
-
-    # Close the file
-    close $summary
-
-    # Check if timing constraints are met based on the contents of the file
-    if {[regexp {All user specified timing constraints are met.} $contents]} {
-        return 1 ;# Timing constraints met
-    } else {
-        return 0 ;# Timing constraints not met
-    }
-}
-
 # general setup stuff...
 
 set_param general.maxThreads 8
@@ -174,52 +156,27 @@ report_utilization -file $outputDir/post_synth_util.rpt
 
 # place...
 
-set timing_met 0
+opt_design
+place_design -directive Explore
+phys_opt_design -directive ExploreWithAggressiveHoldFix
+# write_checkpoint -force $outputDir/post_place
+report_timing_summary -file $outputDir/post_place_timing_summary.rpt
+report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/post_place_timing.rpt
 
-set max_iterations 10
-set iteration_count 0
+# route...
 
-set timing_summary_file "$outputDir/post_route_timing_summary.rpt"
+route_design -directive HigherDelayCost
+# write_checkpoint -force $outputDir/post_route
 
-while {!$timing_met && $iteration_count < $max_iterations} {
-	
-	puts "Iteration: $iteration_count"
+# generate reports...
 
-	opt_design
-	place_design -directive Explore
-	phys_opt_design -directive ExploreWithAggressiveHoldFix
-	# write_checkpoint -force $outputDir/post_place
-	report_timing_summary -file $outputDir/post_place_timing_summary.rpt
-	report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/post_place_timing.rpt
-
-	# route...
-
-	route_design -directive HigherDelayCost
-	# write_checkpoint -force $outputDir/post_route
-
-	# generate reports...
-
-	report_timing_summary -file $outputDir/post_route_timing_summary.rpt
-	report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/post_route_timing.rpt
-	report_clock_utilization -file $outputDir/clock_util.rpt
-	report_utilization -file $outputDir/post_route_util.rpt
-	report_power -file $outputDir/post_route_power.rpt
-	report_drc -file $outputDir/post_imp_drc.rpt
-	report_io -file $outputDir/io.rpt
-
-	set timing_constraints_met [check_timing_constraints $timing_summary_file]
-
-	if {timing_constraints_met} {
-        set timing_met 1
-    } else {
-        # Adjust design or constraints here if necessary
-        # For example, you might adjust clock constraints, optimization settings, or floorplanning
-    }
-
-    # Increment iteration count
-    puts "Failed to meet timing requirements within $iteration_count iterations."
-    set iteration_count [expr {$iteration_count + 1}]
-}
+report_timing_summary -file $outputDir/post_route_timing_summary.rpt
+report_timing -sort_by group -max_paths 100 -path_type summary -file $outputDir/post_route_timing.rpt
+report_clock_utilization -file $outputDir/clock_util.rpt
+report_utilization -file $outputDir/post_route_util.rpt
+report_power -file $outputDir/post_route_power.rpt
+report_drc -file $outputDir/post_imp_drc.rpt
+report_io -file $outputDir/io.rpt
 
 # write out VHDL and constraints for timing sim...
 
