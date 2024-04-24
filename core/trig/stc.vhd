@@ -26,12 +26,15 @@ port(
     detector_id: std_logic_vector(5 downto 0);
     version_id: std_logic_vector(5 downto 0);
     threshold: std_logic_vector(13 downto 0); -- trig threshold relative to calculated baseline
+    --filter_output_selector: std_logic_vector(1 downto 0); --Esteban 
     ti_trigger: in std_logic_vector(7 downto 0); -------------------------
     ti_trigger_stbr: in std_logic;  -------------------------
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
 	afe_dat: in std_logic_vector(13 downto 0); -- aligned AFE data
+    --afe_dat_out: out std_logic_vector(13 downto 0); -- filtered AFE data: Esteban
     enable: in std_logic;
+    --trigger_ch_enable: in std_logic; --Esteban
     
     fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
     fifo_rden: in std_logic;
@@ -67,18 +70,32 @@ architecture stc_arch of stc is
     signal DIP, DOP: array_4x8_type;
 
     signal baseline, trigsample: std_logic_vector(13 downto 0);
+    signal k_lpf_baseline: std_logic_vector(15 downto 0);
+    signal afe_dat_filtered: std_logic_vector(15 downto 0);
 
-    component baseline256 is -- establish average signal level
+    --component baseline256 is -- establish average signal level
+    --port(
+    --    clock: in std_logic;
+    --    reset: in std_logic;
+    --    din: in std_logic_vector(13 downto 0);
+    --    baseline: out std_logic_vector(13 downto 0));
+    --end component;
+
+    component k_low_pass_filter is
     port(
-        clock: in std_logic;
+        clk: in std_logic;
         reset: in std_logic;
-        din: in std_logic_vector(13 downto 0);
-        baseline: out std_logic_vector(13 downto 0));
+        enable: in std_logic;
+        x: in std_logic_vector(15 downto 0);
+        y: out std_logic_vector(15 downto 0)
+    );
     end component;
-
+    
     component trig is -- example trigger algorithm broken out separately, latency = 64 clocks
     port(
         clock: in std_logic;
+        reset: in std_logic;
+        enable: in std_logic;
         din: in std_logic_vector(13 downto 0);
         baseline: in std_logic_vector(13 downto 0);
         threshold: in std_logic_vector(13 downto 0);
@@ -153,13 +170,24 @@ begin
 
     -- compute the average signal baseline level over the last 256 samples
 
-    baseline_inst: baseline256
+    --baseline_inst: baseline256
+    --port map(
+    --    clock => aclk,
+    --    reset => reset,
+    --    din => afe_dat, -- watching live AFE data
+    --    baseline => baseline
+    --);
+
+    lpf_baseline: k_low_pass_filter
     port map(
-        clock => aclk,
+        clk => aclk,
         reset => reset,
-        din => afe_dat, -- watching live AFE data
-        baseline => baseline
+        enable => enable,
+        x => ("00" & afe_dat),
+        y => k_lpf_baseline
     );
+
+    baseline <= k_lpf_baseline(13 downto 0);
 
     -- now for dense data packing, we need to access up to last 4 samples at once...
 
@@ -176,15 +204,19 @@ begin
 
     trig_inst: trig
     port map(
-         clock => aclk,
-         din => afe_dat, -- watching live AFE data
-         baseline => baseline,
-         threshold => threshold,
-         triggered => triggered,
-         trigsample => trigsample, -- the ADC sample that caused the trigger 
-         ti_trigger => ti_trigger,
-         ti_trigger_stbr => ti_trigger_stbr
-    );        
+        clock => aclk,
+        reset => reset,
+        enable => enable,
+        din => afe_dat, -- watching live AFE data
+        baseline => baseline,
+        threshold => threshold,
+        triggered => triggered,
+        trigsample => trigsample, -- the ADC sample that caused the trigger 
+        ti_trigger => ti_trigger,
+        ti_trigger_stbr => ti_trigger_stbr
+    );
+
+    -- afe_dat_out <= afe_dat_filtered(13 downto 0);      
 
     -- FSM waits for trigger condition then assembles output frame and stores into FIFO
 

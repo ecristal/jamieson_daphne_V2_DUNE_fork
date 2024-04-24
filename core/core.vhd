@@ -32,6 +32,7 @@ port(
     sclk100: in std_logic; -- system clock 100MHz 
     reset: in std_logic; -- for sender logic and for GTP quad
     afe_dat: in array_5x9x14_type;  -- AFE data synch to mclk
+    --afe_dat_out: out array_5x9x14_type;  -- output from filter modules
     timestamp: in std_logic_vector(63 downto 0); -- sync to mclk
 
     outmode: in std_logic_vector(7 downto 0); -- output link mode control
@@ -45,6 +46,8 @@ port(
     detector_id: in std_logic_vector(5 downto 0); -- used in output header
     version_id: in std_logic_vector(5 downto 0); -- used in output header
     st_enable: in std_logic_vector(39 downto 0); -- enable/disable channels for self-triggered sender only
+    --st_trigger_ch_enable: in std_logic_vector(39 downto 0); --enable/disable trigger signals
+    --filter_output_selector: in std_logic_vector(1 downto 0); -- filter type selector
 
     oeiclk: in std_logic; -- interface used for output spy buffer and to configure input mux
     trig: in std_logic; -- manually trigger output spy buffer
@@ -107,9 +110,12 @@ architecture core_arch of core is
         detector_id: in std_logic_vector(5 downto 0);
         version_id: in std_logic_vector(5 downto 0);
         enable: in std_logic_vector(39 downto 0);
+        --trigger_ch_enable: in std_logic_vector(39 downto 0);
+        --filter_output_selector: in std_logic_vector(1 downto 0);
         aclk: in std_logic; -- AFE clock 62.500 MHz
         timestamp: in std_logic_vector(63 downto 0);
     	afe_dat: in array_5x9x14_type; -- ADC data all 40 input streams
+        --afe_dat_out: out array_5x9x14_type;
         fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
         dout: out std_logic_vector(31 downto 0);
         kout: out std_logic_vector(3 downto 0)
@@ -229,11 +235,14 @@ begin
         detector_id => detector_id,
         version_id => version_id,
         enable => st_enable,
+        --trigger_ch_enable => st_trigger_ch_enable,
+        --filter_output_selector => filter_output_selector,
         aclk => mclk,
         timestamp => timestamp,
         ti_trigger => ti_trigger, ------------------------------
         ti_trigger_stbr => ti_trigger_stbr, -------------------------
     	afe_dat => afe_dat, -- AFE raw data after alignment all 40 channels
+        --afe_dat_out => afe_dat_out, -- Filtered data by the trigger modules
         fclk => fclk(0), 
         dout => selftrig_sender_dout,
         kout => selftrig_sender_kout

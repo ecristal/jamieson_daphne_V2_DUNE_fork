@@ -26,10 +26,13 @@ port(
     detector_id: in std_logic_vector(5 downto 0);
     version_id: in std_logic_vector(5 downto 0);
     enable: in std_logic_vector(39 downto 0);
+    --trigger_ch_enable: in std_logic_vector(39 downto 0);
+    --filter_output_selector: in std_logic_vector(1 downto 0);
 
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
 	afe_dat: in array_5x9x14_type; -- ALL AFE channels feed into this module
+    --afe_dat_out: out array_5x9x14_type;
 
     fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
     dout: out std_logic_vector(31 downto 0);
@@ -64,6 +67,10 @@ architecture st40_top_arch of st40_top is
         version_id: std_logic_vector(5 downto 0);
         enable: std_logic;
 
+        --filter_output_selector: in std_logic_vector(1 downto 0);
+        --trigger_ch_enable: in std_logic;
+        --afe_dat_out: out std_logic_vector(13 downto 0);
+
         aclk: in std_logic; -- AFE clock 62.500 MHz
         timestamp: in std_logic_vector(63 downto 0);
     	ti_trigger: in std_logic_vector(7 downto 0); -------------------------
@@ -97,10 +104,13 @@ begin
                 detector_id => detector_id,
                 version_id => version_id,
                 enable => enable(8*a+c),
+                --trigger_ch_enable => trigger_ch_enable(8*a+c),
+                --filter_output_selector => filter_output_selector,
     
                 aclk => aclk,
                 timestamp => timestamp,
             	afe_dat => afe_dat(a)(c),
+                --afe_dat_out => afe_dat_out(a)(c),
                 fclk => fclk,
                 fifo_rden => fifo_rden(a)(c),
                 fifo_ae => fifo_ae(a)(c),
