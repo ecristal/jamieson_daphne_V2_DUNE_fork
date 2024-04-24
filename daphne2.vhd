@@ -290,12 +290,15 @@ architecture DAPHNE2_arch of DAPHNE2 is
         sclk100: in std_logic; -- system clock 100MHz
         reset: in std_logic; -- for sender logic and for GTP quad
         afe_dat: in array_5x9x14_type;  -- AFE data synchronized to clock
+        --afe_dat_out: out array_5x9x14_type;
         timestamp: in std_logic_vector(63 downto 0);
         slot_id: in std_logic_vector(3 downto 0);
         crate_id: in std_logic_vector(9 downto 0);
         detector_id: in std_logic_vector(5 downto 0);
         version_id: in std_logic_vector(5 downto 0);
         st_enable: in std_logic_vector(39 downto 0); -- enable/disable channels for self-triggered sender only
+        --st_trigger_ch_enable: in std_logic_vector(39 downto 0); --enable/disable trigger signals
+        --filter_output_selector: in std_logic_vector(1 downto 0); -- filter signal type selector
         outmode: in std_logic_vector(7 downto 0); -- choose streaming or self-trig sender for each output
         threshold: in std_logic_vector(13 downto 0); -- for self-trig senders, threshold relative to average baseline
         --
@@ -359,6 +362,7 @@ architecture DAPHNE2_arch of DAPHNE2 is
     signal trig_gbe0_reg, trig_gbe1_reg, trig_gbe2_reg: std_logic;
 
     signal afe_dout: array_5x9x14_type;
+    --signal afe_dout_filtered: array_5x9x14_type;
     signal afe_dout_pad: array_5x9x16_type;
     signal fe_done, fe_warn: std_logic_vector(4 downto 0);
     signal spy_bufr: array_5x9x16_type;
@@ -398,6 +402,8 @@ architecture DAPHNE2_arch of DAPHNE2 is
     signal ti_trigger_en2: std_logic;   
     
     signal st_enable_reg: std_logic_vector(39 downto 0);
+    --signal st_trigger_ch_enable_reg: std_logic_vector(39 downto 0);
+    --signal filter_output_selector_reg: std_logic_vector(1 downto 0);
     signal st_enable_we: std_logic;
 
 begin
@@ -956,6 +962,7 @@ begin
         reset => reset_async,
 
         afe_dat => afe_dout,
+        --afe_dat_out => afe_dout_filtered,
         timestamp => timestamp,
 
         outmode => outmode_reg,
@@ -969,6 +976,8 @@ begin
         detector_id => daq_out_param_reg(11 downto 6), -- 6 bits
         version_id => daq_out_param_reg(5 downto 0), -- 6 bits
         st_enable => st_enable_reg,
+        --st_trigger_ch_enable => st_trigger_ch_enable_reg, --enable/disable trigger signals
+        --filter_output_selector => filter_output_selector_reg, -- filter type selector
    
         oeiclk => oeiclk,
         trig => trig_sync,
