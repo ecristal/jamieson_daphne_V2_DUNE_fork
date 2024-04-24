@@ -54,7 +54,10 @@ begin
     -- BELOW trig_thresh.
 
     -- triggered_i <= '1' when ( din2>trig_thresh and din1<trig_thresh and din0<trig_thresh ) else '0';
-    triggered_i <= '1' when ( ti_trigger=X"07" and ti_trigger_stbr='1' ) else '0';
+    -- triggered_i <= '1' when ( ti_trigger=X"07" and ti_trigger_stbr='1' ) else '0';
+
+    -- trigger goes between the adhoc conditions or the self trigger threshold condition
+    triggered_i <= '1' when ( ( ti_trigger=X"07" and ti_trigger_stbr='1' ) or ( din2>trig_thresh and din1<trig_thresh and din0<trig_thresh ) ) else '0';
     
     -- add in some fake/synthetic latency, adjust it so total trigger latency is 64 clocks
 
