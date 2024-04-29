@@ -131,6 +131,11 @@
 
 	0x00006001  Self Trigger sender input enables, 40 bits R/W
 
+	Specify the value of the command that generates the adhoc trigger. Default is 7
+	This register is read/write
+	
+	0x00006010 Ad hoc Trigger command value, 8 bits R/W
+
 	0x00009000  Read the FW version aka git commit hash ID, read-only, 28 bits
 
 	0x0000AA55  Test register R/O always returns 0xDEADBEEF, read-only, 32 bit

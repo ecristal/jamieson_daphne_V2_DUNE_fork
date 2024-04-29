@@ -18,6 +18,7 @@ generic( link_id: std_logic_vector(5 downto 0)  := "000000" ); -- this is the OU
 port(
     reset: in std_logic;
 
+    adhoc: in std_logic_vector(7 downto 0); -- user defined command for adhoc trigger
     threshold: in std_logic_vector(13 downto 0); -- user defined threshold relative to avg baseline
     ti_trigger: in std_logic_vector(7 downto 0); -------------------------
     ti_trigger_stbr: in std_logic;  -------------------------
@@ -57,6 +58,7 @@ architecture st40_top_arch of st40_top is
     port(
         reset: in std_logic;
 
+        adhoc: in std_logic_vector(7 downto 0);
         threshold: std_logic_vector(13 downto 0);
         slot_id: std_logic_vector(3 downto 0);
         crate_id: std_logic_vector(9 downto 0);
@@ -89,6 +91,7 @@ begin
             port map(
                 reset => reset,
     
+                adhoc => adhoc,
                 threshold => threshold,
                 ti_trigger => ti_trigger, -------------------------
                 ti_trigger_stbr => ti_trigger_stbr,  -------------------------

@@ -118,6 +118,12 @@ package daphne2_package is
 
     constant DEFAULT_ST_ENABLE: std_logic_vector(39 downto 0) := X"0000000000"; -- all self triggered channels OFF 
 
+    -- address of the ad hoc command for the self trig senders
+
+    constant ST_ADHOC_BASEADDR: std_logic_vector(31 downto 0) := X"00006010";
+
+    constant DEFAULT_ST_ADHOC_COMMAND: std_logic_vector(7 downto 0) := X"07";
+    
     -- spy buffers are 4k deep
 
     constant SPYBUF_AFE0_D0_BASEADDR: std_logic_vector(31 downto 0) := "0100000000000000----------------";
