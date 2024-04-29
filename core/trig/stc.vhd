@@ -25,6 +25,7 @@ port(
     crate_id: std_logic_vector(9 downto 0);
     detector_id: std_logic_vector(5 downto 0);
     version_id: std_logic_vector(5 downto 0);
+    adhoc: std_logic_vector(7 downto 0); -- command for adhoc trigger
     threshold: std_logic_vector(13 downto 0); -- trig threshold relative to calculated baseline
     ti_trigger: in std_logic_vector(7 downto 0); -------------------------
     ti_trigger_stbr: in std_logic;  -------------------------
@@ -81,6 +82,7 @@ architecture stc_arch of stc is
         clock: in std_logic;
         din: in std_logic_vector(13 downto 0);
         baseline: in std_logic_vector(13 downto 0);
+        adhoc: in std_logic_vector(7 downto 0);
         threshold: in std_logic_vector(13 downto 0);
         triggered: out std_logic;        
         trigsample: out std_logic_vector(13 downto 0);
@@ -179,6 +181,7 @@ begin
          clock => aclk,
          din => afe_dat, -- watching live AFE data
          baseline => baseline,
+         adhoc => adhoc,
          threshold => threshold,
          triggered => triggered,
          trigsample => trigsample, -- the ADC sample that caused the trigger 
