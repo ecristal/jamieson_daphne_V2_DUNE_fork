@@ -35,14 +35,7 @@ read_vhdl ../core/core.vhd
 # trigger modules ----
 read_verilog ../core/trig/bicocca_selftrigger_filters/hpf_pedestal_recovery_filter_trigger.v
 read_verilog ../core/trig/bicocca_selftrigger_filters/IIRFilter_afe_integrator_optimized.v
-#read_verilog ../core/pedestal_recov_filters/IIRFilter_movmean_cfd_trigger.v
-#read_verilog ../core/pedestal_recov_filters/n_average_module.v
 read_verilog ../core/trig/bicocca_selftrigger_filters/k_low_pass_filter.v
-#read_verilog ../core/pedestal_recov_filters/k_high_pass_filter.v
-#read_verilog ../core/pedestal_recov_filters/n4_order_k_high_pass_filter.v
-#read_verilog ../core/pedestal_recov_filters/moving_integrator_filter.v
-#read_verilog ../core/pedestal_recov_filters/constant_fraction_discriminator.v
-#read_verilog ../core/pedestal_recov_filters/mi_trigger_module.v
 read_verilog ../core/trig/bicocca_selftrigger_filters/IIRfilter_movmean25_cfd_trigger.v
 # --------------------
 
