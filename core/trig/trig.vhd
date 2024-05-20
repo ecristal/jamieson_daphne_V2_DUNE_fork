@@ -33,7 +33,7 @@ architecture trig_arch of trig is
 
     signal din0, din1, din2: std_logic_vector(13 downto 0) := "00000000000000";
     signal trig_thresh, trigsample_reg: std_logic_vector(13 downto 0);
-    signal triggered_i, trigered_i_module, triggered_dly32_i: std_logic;
+    signal triggered_i, triggered_i_module, triggered_dly32_i: std_logic;
 
     component hpf_pedestal_recovery_filter_trigger is
     port(
@@ -72,7 +72,7 @@ begin
     -- BELOW trig_thresh.
 
     -- triggered_i <= '1' when ( din2>trig_thresh and din1<trig_thresh and din0<trig_thresh ) else '0';
-    triggered_i <= '1' when ( (ti_trigger=X"07" and ti_trigger_stbr='1') or trigered_i_module = '1') else '0';
+    triggered_i <= '1' when ( (ti_trigger=X"07" and ti_trigger_stbr='1') or triggered_i_module = '1') else '0';
 
     filter_trigger_inst: hpf_pedestal_recovery_filter_trigger
     port map(
@@ -85,7 +85,7 @@ begin
         trigger_ch_enable => enable,
         baseline => ("00" & baseline),
         x => ("00" & din),
-        trigger_output => trigered_i_module,
+        trigger_output => triggered_i_module,
         y => open
     );
     

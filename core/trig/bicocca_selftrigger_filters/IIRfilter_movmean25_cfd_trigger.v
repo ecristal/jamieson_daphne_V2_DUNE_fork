@@ -45,7 +45,7 @@ module IIRfilter_movmean25_cfd_trigger #(parameter shift_delay = 15, threshold_d
   	reg signed [2*16 - 1 : 0] y_delay_reg;
   	reg signed [shift_delay*16 -1 : 0] y_shifted;
   	reg trigger_threshold, trigger_crossover, trigger_reg, threshold_signal;
-  	reg [7:0] counter_crossover, counter_threshold;
+  	reg [11:0] counter_crossover, counter_threshold;
 	reg reset_reg, enable_reg;
 	reg signed [31:0] threshold_reg;
 
@@ -123,21 +123,21 @@ module IIRfilter_movmean25_cfd_trigger #(parameter shift_delay = 15, threshold_d
 	// modulo trigger normal 
 
 	always @(posedge clk) begin
-	    if (reset_reg || counter_crossover[7] || (counter_threshold >= 255)) begin
+	    if (reset_reg || counter_crossover[11] || counter_threshold[11]) begin
 			trigger_threshold <= 1'b0;
 		end else if(enable_reg) begin
 			if (($signed(en_mux) < -($signed(threshold_reg))) || trigger_threshold) begin
 			     trigger_threshold <= 1'b1;
 			end
-			/*if(counter_crossover[7]) begin
+			/*if(counter_crossover[11]) begin
 			      trigger_threshold <= 1'b0;
 			end*/
 		end
 	end
 
 	always @(posedge clk) begin
-	    if (reset_reg || counter_crossover[7]) begin
-	        counter_crossover <= 8'b0;
+	    if (reset_reg || counter_crossover[11]) begin
+	        counter_crossover <= 12'b0;
 		end else if(enable_reg && trigger_crossover) begin
 			counter_crossover <= counter_crossover + 1'b1;
 		end
@@ -145,14 +145,14 @@ module IIRfilter_movmean25_cfd_trigger #(parameter shift_delay = 15, threshold_d
 
 	always @(posedge clk) begin
 	    if (reset_reg || ~trigger_threshold) begin
-	        counter_threshold <= 8'b0;
+	        counter_threshold <= 12'b0;
 		end else if(enable_reg && trigger_threshold) begin
 			counter_threshold <= counter_threshold + 1'b1;
 		end
 	end
 
 	always @(posedge clk) begin
-	    if (reset_reg || counter_crossover[7]) begin
+	    if (reset_reg || counter_crossover[11]) begin
 	        trigger_crossover <= 1'b0;
 		end else if(enable_reg && trigger_threshold && (counter_threshold >= 4)) begin
 			if (($signed(y_delay_reg[15:0]) >= $signed(16'd0)) && ($signed(y_delay_reg[31:16]) < $signed(16'd0))) begin
