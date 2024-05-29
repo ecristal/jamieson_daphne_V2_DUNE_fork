@@ -20,6 +20,7 @@ port(
     reset: in std_logic;
     enable: in std_logic;
     din: in std_logic_vector(13 downto 0); -- raw AFE data
+    adhoc: in std_logic_vector(7 downto 0); -- command value for adhoc trigger
     threshold: in std_logic_vector(13 downto 0); -- trigger threshold relative to baseline
     baseline: in std_logic_vector(13 downto 0); -- average signal level computed over past 256 samples
     triggered: out std_logic;
@@ -71,9 +72,6 @@ begin
     -- our super basic trigger condition is this: one sample ABOVE trig_thresh followed by two samples
     -- BELOW trig_thresh.
 
-    -- triggered_i <= '1' when ( din2>trig_thresh and din1<trig_thresh and din0<trig_thresh ) else '0';
-    triggered_i <= '1' when ( (ti_trigger=X"07" and ti_trigger_stbr='1') or triggered_i_module = '1') else '0';
-
     filter_trigger_inst: hpf_pedestal_recovery_filter_trigger
     port map(
         clk => clock,
@@ -88,6 +86,10 @@ begin
         trigger_output => triggered_i_module,
         y => open
     );
+    -- triggered_i <= '1' when ( ti_trigger=adhoc and ti_trigger_stbr='1' ) else '0';
+
+    -- trigger goes between the adhoc conditions or the Milano self trigger condition
+    triggered_i <= '1' when ( ( ti_trigger=adhoc and ti_trigger_stbr='1' ) or ( triggered_i_module = '1' ) ) else '0';
     
     -- add in some fake/synthetic latency, adjust it so total trigger latency is 64 clocks
 

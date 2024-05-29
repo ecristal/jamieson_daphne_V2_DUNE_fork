@@ -36,6 +36,7 @@ port(
     timestamp: in std_logic_vector(63 downto 0); -- sync to mclk
 
     outmode: in std_logic_vector(7 downto 0); -- output link mode control
+    adhoc: in std_logic_vector(7 downto 0); -- command for adhoc trigger
     threshold: in std_logic_vector(13 downto 0); -- for self-triggered mode, relative to average baseline
 
     ti_trigger: in std_logic_vector(7 downto 0); ------------------------
@@ -102,6 +103,7 @@ architecture core_arch of core is
     generic( link_id: std_logic_vector(5 downto 0)  := "000000" );
     port(
         reset: in std_logic;    
+        adhoc: in std_logic_vector(7 downto 0); -- user defined command for adhoc trigger
         threshold: in std_logic_vector(13 downto 0); -- user defined threshold relative to baseline
         ti_trigger: in std_logic_vector(7 downto 0); -------------------------
         ti_trigger_stbr: in std_logic;  -------------------------
@@ -229,6 +231,7 @@ begin
     generic map( link_id => "000000" )
     port map(
         reset => reset,
+        adhoc => adhoc,
         threshold => threshold,
         slot_id => slot_id,
         crate_id => crate_id,
