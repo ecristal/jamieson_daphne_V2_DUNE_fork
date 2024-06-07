@@ -20,8 +20,10 @@ port(
     reset: in std_logic;
     enable: in std_logic;
     din: in std_logic_vector(13 downto 0); -- raw AFE data
+    dout: out std_logic_vector(13 downto 0); -- Filtered AFE data
     adhoc: in std_logic_vector(7 downto 0); -- command value for adhoc trigger
     threshold: in std_logic_vector(13 downto 0); -- trigger threshold relative to baseline
+    filter_output_selector: in std_logic_vector(1 downto 0);
     baseline: in std_logic_vector(13 downto 0); -- average signal level computed over past 256 samples
     triggered: out std_logic;
     trigsample: out std_logic_vector(13 downto 0); -- the sample that caused the trigger
@@ -33,6 +35,7 @@ end trig;
 architecture trig_arch of trig is
 
     signal din0, din1, din2: std_logic_vector(13 downto 0) := "00000000000000";
+    signal dout_filter: std_logic_vector(15 downto 0);
     signal trig_thresh, trigsample_reg: std_logic_vector(13 downto 0);
     signal triggered_i, triggered_i_module, triggered_dly32_i: std_logic;
 
@@ -79,12 +82,12 @@ begin
         n_1_reset => '0',
         enable => enable,
         threshold_value => (X"0000" & "00" & threshold),
-        output_selector => "11",
+        output_selector => filter_output_selector,
         trigger_ch_enable => enable,
         baseline => ("00" & baseline),
         x => ("00" & din),
         trigger_output => triggered_i_module,
-        y => open
+        y => dout_filter
     );
     -- triggered_i <= '1' when ( ti_trigger=adhoc and ti_trigger_stbr='1' ) else '0';
 
@@ -125,5 +128,6 @@ begin
     end process samplecap_proc;
 
     trigsample <= trigsample_reg;
+    dout <= dout_filter(13 downto 0);
 
 end trig_arch;

@@ -290,15 +290,13 @@ architecture DAPHNE2_arch of DAPHNE2 is
         sclk100: in std_logic; -- system clock 100MHz
         reset: in std_logic; -- for sender logic and for GTP quad
         afe_dat: in array_5x9x14_type;  -- AFE data synchronized to clock
-        --afe_dat_out: out array_5x9x14_type;
         timestamp: in std_logic_vector(63 downto 0);
         slot_id: in std_logic_vector(3 downto 0);
         crate_id: in std_logic_vector(9 downto 0);
         detector_id: in std_logic_vector(5 downto 0);
         version_id: in std_logic_vector(5 downto 0);
         st_enable: in std_logic_vector(39 downto 0); -- enable/disable channels for self-triggered sender only
-        --st_trigger_ch_enable: in std_logic_vector(39 downto 0); --enable/disable trigger signals
-        --filter_output_selector: in std_logic_vector(1 downto 0); -- filter signal type selector
+        filter_output_selector: in std_logic_vector(1 downto 0); -- filter signal type selector
         outmode: in std_logic_vector(7 downto 0); -- choose streaming or self-trig sender for each output
         adhoc: in std_logic_vector(7 downto 0); -- command for adhoc trigger
         threshold: in std_logic_vector(13 downto 0); -- for self-trig senders, threshold relative to average baseline
@@ -407,9 +405,9 @@ architecture DAPHNE2_arch of DAPHNE2 is
     signal ti_trigger_en2: std_logic;   
     
     signal st_enable_reg: std_logic_vector(39 downto 0);
-    --signal st_trigger_ch_enable_reg: std_logic_vector(39 downto 0);
-    --signal filter_output_selector_reg: std_logic_vector(1 downto 0);
-    signal st_enable_we: std_logic;
+    signal st_config_reg: std_logic_vector(31 downto 0);
+    signal filter_output_selector_reg: std_logic_vector(1 downto 0);
+    signal st_enable_we, st_config_we: std_logic;
 
 begin
 
@@ -774,7 +772,8 @@ begin
                (X"000000000000" & "000" & mclk_stat_reg) when std_match(rx_addr_reg, MCLK_STAT_ADDR) else
                (X"000000000000" & mclk_ctrl_reg) when std_match(rx_addr_reg, MCLK_CTRL_ADDR) else 
                (X"00000000000000" & spi_res_fifo_data) when std_match(rx_addr_reg, SPI_FIFO_ADDR) else 
-               (X"000000000000" & "00" & threshold_reg(13 downto 0)) when std_match(rx_addr_reg, THRESHOLD_BASEADDR) else 
+               (X"000000000000" & "00" & threshold_reg(13 downto 0)) when std_match(rx_addr_reg, THRESHOLD_BASEADDR) else
+               (X"00000000" & st_config_reg) when std_match(rx_addr_reg, ST_CONFIG_ADDR) else  
                (X"00000000000000" & adhoc_reg(7 downto 0)) when std_match(rx_addr_reg, ST_ADHOC_BASEADDR) else 
                (X"00000000000000" & outmode_reg(7 downto 0)) when std_match(rx_addr_reg, DAQ_OUTMODE_BASEADDR) else 
                (X"00000000000000" & "00" & inmux_dout(5 downto 0)) when std_match(rx_addr_reg, CORE_INMUX_ADDR) else
@@ -959,6 +958,7 @@ begin
     -- apply to the four streaming senders, which use a more flexible muxing scheme on their inputs
 
     st_enable_we <= '1' when (std_match(rx_addr,ST_ENABLE_ADDR) and rx_wren='1') else '0';
+    
 
     st_enable_proc: process(oeiclk)
     begin
@@ -970,6 +970,21 @@ begin
             end if;
         end if;
     end process st_enable_proc;
+
+    st_config_we <= '1' when (std_match(rx_addr,ST_CONFIG_ADDR) and rx_wren='1') else '0';
+
+    st_config_proc: process(oeiclk)
+    begin
+        if rising_edge(oeiclk) then
+            if (reset_async='1') then
+                st_config_reg <= DEFAULT_ST_CONFIG;
+                filter_output_selector_reg <= DEFAULT_ST_CONFIG(1 downto 0);
+            elsif (st_config_we='1') then
+                st_config_reg <= rx_data(31 downto 0);
+                filter_output_selector_reg <= rx_data(1 downto 0);
+            end if;
+        end if;
+    end process st_config_proc;
 
     -- decode write enable for core inmux control register block of 40 6-bit registers
 
@@ -984,7 +999,6 @@ begin
         reset => reset_async,
 
         afe_dat => afe_dout,
-        --afe_dat_out => afe_dout_filtered,
         timestamp => timestamp,
 
         outmode => outmode_reg,
@@ -999,8 +1013,7 @@ begin
         detector_id => daq_out_param_reg(11 downto 6), -- 6 bits
         version_id => daq_out_param_reg(5 downto 0), -- 6 bits
         st_enable => st_enable_reg,
-        --st_trigger_ch_enable => st_trigger_ch_enable_reg, --enable/disable trigger signals
-        --filter_output_selector => filter_output_selector_reg, -- filter type selector
+        filter_output_selector => filter_output_selector_reg, -- filter type selector
    
         oeiclk => oeiclk,
         trig => trig_sync,

@@ -27,15 +27,13 @@ port(
     version_id: std_logic_vector(5 downto 0);
     adhoc: std_logic_vector(7 downto 0); -- command for adhoc trigger
     threshold: std_logic_vector(13 downto 0); -- trig threshold relative to calculated baseline
-    --filter_output_selector: std_logic_vector(1 downto 0); --Esteban 
+    filter_output_selector: in std_logic_vector(1 downto 0); --Esteban 
     ti_trigger: in std_logic_vector(7 downto 0); -------------------------
     ti_trigger_stbr: in std_logic;  -------------------------
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
 	afe_dat: in std_logic_vector(13 downto 0); -- aligned AFE data
-    --afe_dat_out: out std_logic_vector(13 downto 0); -- filtered AFE data: Esteban
     enable: in std_logic;
-    --trigger_ch_enable: in std_logic; --Esteban
     
     fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
     fifo_rden: in std_logic;
@@ -72,7 +70,7 @@ architecture stc_arch of stc is
 
     signal baseline, trigsample: std_logic_vector(13 downto 0);
     signal k_lpf_baseline: std_logic_vector(15 downto 0);
-    signal afe_dat_filtered: std_logic_vector(15 downto 0);
+    signal afe_dat_filtered: std_logic_vector(13 downto 0);
 
     --component baseline256 is -- establish average signal level
     --port(
@@ -98,9 +96,11 @@ architecture stc_arch of stc is
         reset: in std_logic;
         enable: in std_logic;
         din: in std_logic_vector(13 downto 0);
+        dout: out std_logic_vector(13 downto 0);
         baseline: in std_logic_vector(13 downto 0);
         adhoc: in std_logic_vector(7 downto 0);
         threshold: in std_logic_vector(13 downto 0);
+        filter_output_selector: in std_logic_vector(1 downto 0);
         triggered: out std_logic;        
         trigsample: out std_logic_vector(13 downto 0);
         ti_trigger: in std_logic_vector(7 downto 0); -------------------------
@@ -133,7 +133,7 @@ begin
             clk => aclk,
             ce => '1',
             a => "11111",
-            d => afe_dat(i), -- real time AFE data
+            d => afe_dat_filtered(i), -- real time AFE data
             q => open,
             q31 => afe_dly32_i(i) -- AFE data 32 clocks ago 
         );
@@ -210,16 +210,16 @@ begin
         reset => reset,
         enable => enable,
         din => afe_dat, -- watching live AFE data
+        dout => afe_dat_filtered,
         adhoc => adhoc,
         baseline => baseline,
         threshold => threshold,
+        filter_output_selector => filter_output_selector,
         triggered => triggered,
         trigsample => trigsample, -- the ADC sample that caused the trigger 
         ti_trigger => ti_trigger,
         ti_trigger_stbr => ti_trigger_stbr
-    );
-
-    -- afe_dat_out <= afe_dat_filtered(13 downto 0);      
+    );     
 
     -- FSM waits for trigger condition then assembles output frame and stores into FIFO
 
