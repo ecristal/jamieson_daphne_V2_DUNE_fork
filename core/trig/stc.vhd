@@ -26,7 +26,7 @@ port(
     detector_id: std_logic_vector(5 downto 0);
     version_id: std_logic_vector(5 downto 0);
     adhoc: std_logic_vector(7 downto 0); -- command for adhoc trigger
-    threshold: std_logic_vector(13 downto 0); -- trig threshold relative to calculated baseline
+    threshold: in std_logic_vector(13 downto 0); -- trig threshold relative to calculated baseline
     filter_output_selector: in std_logic_vector(1 downto 0); --Esteban 
     ti_trigger: in std_logic_vector(7 downto 0); -------------------------
     ti_trigger_stbr: in std_logic;  -------------------------
@@ -69,7 +69,6 @@ architecture stc_arch of stc is
     signal DIP, DOP: array_4x8_type;
 
     signal baseline, trigsample: std_logic_vector(13 downto 0);
-    signal k_lpf_baseline: std_logic_vector(15 downto 0);
     signal afe_dat_filtered: std_logic_vector(13 downto 0);
 
     --component baseline256 is -- establish average signal level
@@ -79,16 +78,6 @@ architecture stc_arch of stc is
     --    din: in std_logic_vector(13 downto 0);
     --    baseline: out std_logic_vector(13 downto 0));
     --end component;
-
-    component k_low_pass_filter is
-    port(
-        clk: in std_logic;
-        reset: in std_logic;
-        enable: in std_logic;
-        x: in std_logic_vector(15 downto 0);
-        y: out std_logic_vector(15 downto 0)
-    );
-    end component;
     
     component trig is -- example trigger algorithm broken out separately, latency = 64 clocks
     port(
@@ -97,7 +86,7 @@ architecture stc_arch of stc is
         enable: in std_logic;
         din: in std_logic_vector(13 downto 0);
         dout: out std_logic_vector(13 downto 0);
-        baseline: in std_logic_vector(13 downto 0);
+        baseline: out std_logic_vector(13 downto 0);
         adhoc: in std_logic_vector(7 downto 0);
         threshold: in std_logic_vector(13 downto 0);
         filter_output_selector: in std_logic_vector(1 downto 0);
@@ -180,17 +169,6 @@ begin
     --    baseline => baseline
     --);
 
-    lpf_baseline: k_low_pass_filter
-    port map(
-        clk => aclk,
-        reset => reset,
-        enable => enable,
-        x => ("00" & afe_dat),
-        y => k_lpf_baseline
-    );
-
-    baseline <= k_lpf_baseline(13 downto 0);
-
     -- now for dense data packing, we need to access up to last 4 samples at once...
 
     pack_proc: process(aclk)
@@ -219,7 +197,7 @@ begin
         trigsample => trigsample, -- the ADC sample that caused the trigger 
         ti_trigger => ti_trigger,
         ti_trigger_stbr => ti_trigger_stbr
-    );     
+    );    
 
     -- FSM waits for trigger condition then assembles output frame and stores into FIFO
 

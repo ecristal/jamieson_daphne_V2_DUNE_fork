@@ -15,56 +15,38 @@
 module IIRFilter_afe_integrator_optimized(
     input wire clk,
   	input wire reset,
-  	input wire n_1_reset,
     input wire enable,
     input wire signed[15:0] x,
     output wire signed[15:0] y
     );
 
-    reg signed [17:0] n1, n2, n3, d1, d2;
-    reg signed [24:0] x_1, x_2, y_1, y_2;
-  	reg signed[15:0] x_i, en_mux;
-  	//(* dont_touch = "true" *) reg reset_reg;
-	//(* dont_touch = "true" *) reg enable_reg;
+    (* dont_touch = "true" *) reg signed [17:0] n1, n2, n3, d1, d2;
+    (* dont_touch = "true" *) reg signed [24:0] x_1, x_2, y_1, y_2;
+  	(* dont_touch = "true" *) reg signed[15:0] x_i, en_mux;
+  	(* dont_touch = "true" *) reg enable_reg, reset_reg;
 
   	wire signed[24:0] w1, w4, w7, w12, w13, w15;
   	wire signed [17:0] w2, w20, w8, w14, w16;
   	wire signed[47:0] w3, w5, w9, w6, w10, w11, w17, w18, w19;
   	
-  	//always @(posedge clk) begin
-	//   reset_reg <= reset; 
-	//   enable_reg <= enable;
-	//end
+  	always @(posedge clk) begin
+	   reset_reg <= reset; 
+	   enable_reg <= enable;
+	end
 
 	always @(posedge clk) begin
-		if(reset) begin
-			// ********** FBK ************ //
-			// n1 <= {3'b000,15'b111100000001001};
-			// n2 <= {3'b110,15'b001011101111000}; // n2
-			// n3 <= {3'b000,15'b111000001111100}; // n3
-			// d1 <= {3'b001,15'b111000110011100};
-			// d2 <= {3'b111,15'b000111001001100};
-			// ********** FBK ************ //
-
-			// ********** HPK ************ //
-			 n1 <= {3'b000,15'b111100010110100}; 
-			 n2 <= {3'b110,15'b001011010011110}; // 1101001011000011
-			 n3 <= {3'b000,15'b111000010101100}; 
-			 d1 <= {3'b001,15'b111000010110100}; 
-			 d2 <= {3'b111,15'b000111100110000}; // 1110000110011111
-			// ********** HPK ************ //
+		if(reset_reg) begin
+			n1 <= {3'b000,15'b111100010110100}; 
+			n2 <= {3'b110,15'b001011010011110};
+			n3 <= {3'b000,15'b111000010101100}; 
+			d1 <= {3'b001,15'b111000010110100}; 
+			d2 <= {3'b111,15'b000111100110000};
 			x_i <= 16'b0;
             x_1 <= 25'b0;
             x_2 <= 25'b0;
 			y_1 <= 25'b0;
 			y_2 <= 25'b0;
-		end else if (n_1_reset) begin
-		    x_i <= 16'b0;
-			x_1 <= 25'b0;
-            x_2 <= 25'b0;
-			y_1 <= 25'b0;
-			y_2 <= 25'b0;
-		end else if (enable) begin
+		end else if (enable_reg) begin
 		    x_i <= x;
 			x_1 <= w1;
 			x_2 <= w4;

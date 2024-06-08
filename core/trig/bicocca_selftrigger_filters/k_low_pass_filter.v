@@ -19,26 +19,16 @@ module k_low_pass_filter(
 );
     
     parameter k = 26;
-    parameter hist = 20;
     
-    reg reset_reg, enable_reg;
-    reg signed [15:0] in_reg, out_reg, diff;
-    //reg signed [15:0] diff;
-	reg signed [47:0] x_1, y_1;
+    (* dont_touch = "true" *) reg reset_reg, enable_reg;
+    (* dont_touch = "true" *) reg signed [15:0] in_reg, out_reg;
+	(* dont_touch = "true" *) reg signed [47:0] x_1, y_1;
 
 	wire signed [47:0] w1, w2, w3, w4, w5, w6, w7;
 
-	always @(posedge clk) begin 
-		if(reset) begin
-			reset_reg <= 1'b1;
-			enable_reg <= 1'b0;
-		end else if (enable) begin
-			reset_reg <= 1'b0;
-			enable_reg <= 1'b1;
-		end else begin 
-			reset_reg <= 1'b0;
-			enable_reg <= 1'b0;
-		end
+	always @(posedge clk) begin
+	   reset_reg <= reset;
+	   enable_reg <= enable;
 	end
 
 	always @(posedge clk) begin
@@ -47,15 +37,11 @@ module k_low_pass_filter(
 			y_1 <= 0;
 			in_reg <= 0;
 			out_reg <= 0;
-			//diff <= 0;
 		end else if(enable_reg) begin
 			x_1 <= w1;
 			y_1 <= w6;
 			in_reg <= x;
-            //diff <= out_reg - w6[47:32];
-			//if(hist <= $unsigned(diff)) begin
 			out_reg <= w6[47:32];
-			//end 
 		end
 	end
 

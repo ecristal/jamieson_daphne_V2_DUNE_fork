@@ -24,7 +24,7 @@ port(
     adhoc: in std_logic_vector(7 downto 0); -- command value for adhoc trigger
     threshold: in std_logic_vector(13 downto 0); -- trigger threshold relative to baseline
     filter_output_selector: in std_logic_vector(1 downto 0);
-    baseline: in std_logic_vector(13 downto 0); -- average signal level computed over past 256 samples
+    baseline: out std_logic_vector(13 downto 0); -- baseline 300mHz LPF output. 
     triggered: out std_logic;
     trigsample: out std_logic_vector(13 downto 0); -- the sample that caused the trigger
     ti_trigger: in std_logic_vector(7 downto 0);
@@ -35,7 +35,8 @@ end trig;
 architecture trig_arch of trig is
 
     signal din0, din1, din2: std_logic_vector(13 downto 0) := "00000000000000";
-    signal dout_filter: std_logic_vector(15 downto 0);
+    signal din_trig: std_logic_vector(15 downto 0) := "0000000000000000";
+    signal dout_filter, k_lpf_baseline: std_logic_vector(15 downto 0);
     signal trig_thresh, trigsample_reg: std_logic_vector(13 downto 0);
     signal triggered_i, triggered_i_module, triggered_dly32_i: std_logic;
 
@@ -43,12 +44,10 @@ architecture trig_arch of trig is
     port(
         clk: in std_logic;
         reset: in std_logic;
-        n_1_reset: in std_logic;
         enable: in std_logic;
-        threshold_value: in std_logic_vector(31 downto 0);
+        threshold_value: in std_logic_vector(13 downto 0);
         output_selector: in std_logic_vector(1 downto 0);
-        trigger_ch_enable: in std_logic;
-        baseline: in std_logic_vector(15 downto 0);
+        baseline: out std_logic_vector(15 downto 0);
         x:  in std_logic_vector(15 downto 0);
         trigger_output: out std_logic;
         y: out std_logic_vector(15 downto 0)
@@ -79,13 +78,11 @@ begin
     port map(
         clk => clock,
         reset => reset,
-        n_1_reset => '0',
         enable => enable,
-        threshold_value => (X"0000" & "00" & threshold),
+        threshold_value => threshold,
         output_selector => filter_output_selector,
-        trigger_ch_enable => enable,
-        baseline => ("00" & baseline),
-        x => ("00" & din),
+        baseline => k_lpf_baseline,
+        x => din_trig,
         trigger_output => triggered_i_module,
         y => dout_filter
     );
@@ -129,5 +126,7 @@ begin
 
     trigsample <= trigsample_reg;
     dout <= dout_filter(13 downto 0);
-
+    baseline <= k_lpf_baseline(13 downto 0); 
+    din_trig(13 downto 0) <= din;
+    
 end trig_arch;

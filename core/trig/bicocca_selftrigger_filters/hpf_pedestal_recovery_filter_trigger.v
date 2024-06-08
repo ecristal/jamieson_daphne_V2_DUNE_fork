@@ -13,12 +13,10 @@
 module hpf_pedestal_recovery_filter_trigger(
 	input wire clk,
 	input wire reset,
-    input wire n_1_reset,
 	input wire enable,
-    input wire signed [31:0] threshold_value,
+    input wire signed [13:0] threshold_value,
     input wire [1:0] output_selector,
-    input wire trigger_ch_enable,
-    input wire signed [15:0] baseline,
+    output wire signed [15:0] baseline,
 	input wire signed [15:0] x,
     output wire trigger_output,
 	output wire signed [15:0] y
@@ -29,35 +27,34 @@ module hpf_pedestal_recovery_filter_trigger(
 	wire signed [15:0] x_i;
     //wire signed [15:0] w_resta_out [4:0][7:0];
     wire signed [15:0] w_out;
-	wire signed [15:0] resta_out;
+	wire signed [15:0] resta_out, lpf_out;
 	wire signed [15:0] suma_out;
     wire tm_output_selector;
 
     wire trigger_output_wire;
 
-    reg signed [31:0] threshold_level;
+    (* dont_touch = "true" *) reg signed [13:0] threshold_level;
 
     always @(posedge clk) begin 
         if(reset) begin
-           threshold_level <= $signed(99999);
+           threshold_level <= $signed(256); // Same as DEFAULT_THRESHOLD
         end else if (enable) begin 
            threshold_level <= $signed(threshold_value);
         end
     end
     
 
-    //k_low_pass_filter lpf(
-    //   .clk(clk),
-    //    .reset(reset),
-    //    .enable(enable),
-    //    .x(x_i),
-    //    .y(lpf_out)
-    //);
+    k_low_pass_filter lpf(
+        .clk(clk),
+        .reset(reset),
+        .enable(enable),
+        .x(x_i),
+        .y(lpf_out)
+    );
 
     IIRFilter_afe_integrator_optimized hpf(
         .clk(clk),
         .reset(reset),
-        .n_1_reset(n_1_reset),
         .enable(enable),
         .x(resta_out),
         .y(hpf_out)
@@ -66,30 +63,26 @@ module hpf_pedestal_recovery_filter_trigger(
     IIRfilter_movmean25_cfd_trigger mov_mean_cfd(
         .clk(clk),
         .reset(reset),
-        .n_1_reset(n_1_reset),
         .enable(enable),
         .output_selector(tm_output_selector),
         .threshold(threshold_level),
         .x(hpf_out),
-        .trigger(trigger_output_wire),
+        .trigger(trigger_output),
         .y(movmean_out)
     );
 
-
-    assign trigger_output = (trigger_output_wire && trigger_ch_enable);
-
     assign resta_out =  (enable==0) ?   x_i : 
-                        (enable==1) ?   (x_i - baseline) : 
+                        (enable==1) ?   (x_i - lpf_out) : 
                         16'bx; 
     
     assign suma_out = (enable==0) ?   hpf_out : 
-                      (enable==1) ?   (hpf_out + baseline) : 
+                      (enable==1) ?   (hpf_out + lpf_out) : 
                       16'bx;
 
 
     assign w_out = (output_selector == 2'b00) ?   suma_out : 
-                   (output_selector == 2'b01) ?   baseline + movmean_out : //movmean
-                   (output_selector == 2'b10) ?   baseline + movmean_out : //movmean cfd
+                   (output_selector == 2'b01) ?   lpf_out + movmean_out : //movmean
+                   (output_selector == 2'b10) ?   lpf_out + movmean_out : //movmean cfd
                    (output_selector == 2'b11) ?   x_i :
                    16'bx;
    
