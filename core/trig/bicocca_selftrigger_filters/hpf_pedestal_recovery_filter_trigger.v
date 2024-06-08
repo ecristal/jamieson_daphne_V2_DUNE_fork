@@ -31,8 +31,6 @@ module hpf_pedestal_recovery_filter_trigger(
 	wire signed [15:0] suma_out;
     wire tm_output_selector;
 
-    wire trigger_output_wire;
-
     (* dont_touch = "true" *) reg signed [13:0] threshold_level;
 
     always @(posedge clk) begin 
@@ -89,7 +87,7 @@ module hpf_pedestal_recovery_filter_trigger(
 
     assign x_i = x;
     assign y = w_out;
-
+    assign baseline = lpf_out;
 	
     assign tm_output_selector = (output_selector == 2'b00) ?   1'b0 : //hpf 
                                 (output_selector == 2'b01) ?   1'b0 : //movmean
