@@ -46,6 +46,7 @@ port(
     detector_id: in std_logic_vector(5 downto 0); -- used in output header
     version_id: in std_logic_vector(5 downto 0); -- used in output header
     st_enable: in std_logic_vector(39 downto 0); -- enable/disable channels for self-triggered sender only
+    st_triggered: out std_logic_vector(39 downto 0);
     filter_output_selector: in std_logic_vector(1 downto 0); -- filter type selector
 
     oeiclk: in std_logic; -- interface used for output spy buffer and to configure input mux
@@ -110,6 +111,7 @@ architecture core_arch of core is
         detector_id: in std_logic_vector(5 downto 0);
         version_id: in std_logic_vector(5 downto 0);
         enable: in std_logic_vector(39 downto 0);
+        ti_triggered: out std_logic_vector(39 downto 0);
         filter_output_selector: in std_logic_vector(1 downto 0);
         aclk: in std_logic; -- AFE clock 62.500 MHz
         timestamp: in std_logic_vector(63 downto 0);

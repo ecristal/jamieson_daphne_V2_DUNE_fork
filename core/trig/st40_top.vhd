@@ -27,6 +27,7 @@ port(
     detector_id: in std_logic_vector(5 downto 0);
     version_id: in std_logic_vector(5 downto 0);
     enable: in std_logic_vector(39 downto 0);
+    st_triggered: out std_logic_vector(39 downto 0);
     filter_output_selector: in std_logic_vector(1 downto 0);
 
     aclk: in std_logic; -- AFE clock 62.500 MHz
@@ -69,6 +70,7 @@ architecture st40_top_arch of st40_top is
         filter_output_selector: in std_logic_vector(1 downto 0);
         aclk: in std_logic; -- AFE clock 62.500 MHz
         timestamp: in std_logic_vector(63 downto 0);
+        st_triggered: out std_logic;
     	ti_trigger: in std_logic_vector(7 downto 0); -------------------------
         ti_trigger_stbr: in std_logic;  -------------------------
         afe_dat: in std_logic_vector(13 downto 0);
@@ -101,6 +103,7 @@ begin
                 version_id => version_id,
                 enable => enable(8*a+c),
                 filter_output_selector => filter_output_selector,
+                st_triggered => st_triggered(8*a+c),
                 aclk => aclk,
                 timestamp => timestamp,
             	afe_dat => afe_dat(a)(c),

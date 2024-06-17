@@ -28,6 +28,7 @@ port(
     adhoc: std_logic_vector(7 downto 0); -- command for adhoc trigger
     threshold: in std_logic_vector(13 downto 0); -- trig threshold relative to calculated baseline
     filter_output_selector: in std_logic_vector(1 downto 0); --Esteban 
+    st_triggered: out std_logic;
     ti_trigger: in std_logic_vector(7 downto 0); -------------------------
     ti_trigger_stbr: in std_logic;  -------------------------
     aclk: in std_logic; -- AFE clock 62.500 MHz
@@ -198,7 +199,7 @@ begin
         ti_trigger => ti_trigger,
         ti_trigger_stbr => ti_trigger_stbr
     );    
-
+    st_triggered <= triggered;
     -- FSM waits for trigger condition then assembles output frame and stores into FIFO
 
     builder_fsm_proc: process(aclk)

@@ -129,6 +129,12 @@ package daphne2_package is
     constant ST_ADHOC_BASEADDR: std_logic_vector(31 downto 0) := X"00006010";
 
     constant DEFAULT_ST_ADHOC_COMMAND: std_logic_vector(7 downto 0) := X"07";
+
+    constant TRIGGER_GUI_DEAD_TIME_ADDR: std_logic_vector(31 downto 0) := X"00002020";
+    constant THRESHOLD_CONFIG_ADDR: std_logic_vector(31 downto 0) := X"00002021";
+    constant FILTER_TRIGGER_ENABLE_CONFIG_ADDR: std_logic_vector(31 downto 0) := X"00002022";
+    constant FILTER_TRIGGER_ENABLE_ADDR: std_logic_vector(31 downto 0) := X"00002023";
+    constant THRESHOLD_READ_ADDR: std_logic_vector(31 downto 0) := X"00002024";
     
     -- spy buffers are 4k deep
 

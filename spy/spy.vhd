@@ -26,7 +26,7 @@ port(
     reset: in std_logic; -- reset sync to clka
     trig:  in std_logic; -- trigger pulse sync to clka
     dia:   in std_logic_vector(15 downto 0); -- data bus from AFE channel
-
+    a_in:  in std_logic_vector(4 downto 0); -- shift register pre-trigger amount selector
     clkb:  in  std_logic;
     addrb: in  std_logic_vector(11 downto 0);
     dob:   out std_logic_vector(15 downto 0)
@@ -39,6 +39,9 @@ architecture spy_arch of spy is
     signal reset_reg: std_logic;
     signal addr_reg: std_logic_vector(11 downto 0);
     signal dia_reg, dia_q, dia_delayed:  std_logic_vector(15 downto 0);
+    signal dia_q0, dia_q1, dia_q2, dia_q3, dia_q4:  std_logic_vector(15 downto 0);
+    signal dia_q5, dia_q6, dia_q7, dia_q8, dia_q9:  std_logic_vector(15 downto 0);
+    signal dia_q10, dia_q11, dia_q12, dia_q13, dia_q14:  std_logic_vector(15 downto 0);
     signal we_reg:   std_logic_vector(0 downto 0);
 
     type state_type is (rst, wait4trig, store, wait4done);
@@ -54,18 +57,158 @@ begin
         port map(
             clk => clka,
             ce => '1',
-            a => "11111",
+            a => a_in,
             d => dia(i),
-            q => open,
-            q31 => dia_q(i)  
+            q => dia_q0(i),
+            q31 => open   
         );
-    
+
         srlc32e_1_inst : srlc32e
         port map(
             clk => clka,
             ce => '1',
-            a => "11111",
-            d => dia_q(i),
+            a => a_in,
+            d => dia_q0(i),
+            q => dia_q1(i),
+            q31 => open  
+        );
+
+        srlc32e_2_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q1(i),
+            q => dia_q2(i),
+            q31 => open  
+        );
+
+        srlc32e_3_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q2(i),
+            q => dia_q3(i),
+            q31 => open   
+        );
+
+        srlc32e_4_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q3(i),
+            q => dia_q4(i),
+            q31 => open   
+        );
+
+        srlc32e_5_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q4(i),
+            q => dia_q5(i),
+            q31 => open   
+        );
+
+        srlc32e_6_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q5(i),
+            q => dia_q6(i),
+            q31 => open   
+        );
+
+        srlc32e_7_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q6(i),
+            q => dia_q7(i),
+            q31 => open   
+        );
+
+        srlc32e_8_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q7(i),
+            q => dia_q8(i),
+            q31 => open   
+        );
+
+        srlc32e_9_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q8(i),
+            q => dia_q9(i),
+            q31 => open   
+        );
+
+        srlc32e_10_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q9(i),
+            q => dia_q10(i),
+            q31 => open   
+        );
+
+        srlc32e_11_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q10(i),
+            q => dia_q11(i),
+            q31 => open   
+        );
+
+        srlc32e_12_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q11(i),
+            q => dia_q12(i),
+            q31 => open   
+        );
+
+        srlc32e_13_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q12(i),
+            q => dia_q13(i),
+            q31 => open   
+        );
+
+        srlc32e_14_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q13(i),
+            q => dia_q14(i),
+            q31 => open   
+        );
+    
+        srlc32e_15_inst : srlc32e
+        port map(
+            clk => clka,
+            ce => '1',
+            a => a_in,
+            d => dia_q14(i),
             q => dia_delayed(i),
             q31 => open  
         );
