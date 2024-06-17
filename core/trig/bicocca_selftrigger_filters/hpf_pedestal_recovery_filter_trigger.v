@@ -33,6 +33,10 @@ module hpf_pedestal_recovery_filter_trigger(
 
     (* dont_touch = "true" *) reg signed [13:0] threshold_level;
 
+    initial begin 
+        threshold_level <= $signed(256); // Same as DEFAULT_THRESHOLD
+    end 
+
     always @(posedge clk) begin 
         if(reset) begin
            threshold_level <= $signed(256); // Same as DEFAULT_THRESHOLD

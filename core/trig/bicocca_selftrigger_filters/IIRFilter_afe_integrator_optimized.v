@@ -28,6 +28,22 @@ module IIRFilter_afe_integrator_optimized(
   	wire signed[24:0] w1, w4, w7, w12, w13, w15;
   	wire signed [17:0] w2, w20, w8, w14, w16;
   	wire signed[47:0] w3, w5, w9, w6, w10, w11, w17, w18, w19;
+
+  	initial begin 
+  		reset_reg <= 1'b0; 
+	    enable_reg <= 1'b0;
+	    n1 <= {3'b000,15'b111100010110100}; 
+		n2 <= {3'b110,15'b001011010011110};
+		n3 <= {3'b000,15'b111000010101100}; 
+		d1 <= {3'b001,15'b111000010110100}; 
+		d2 <= {3'b111,15'b000111100110000};
+		x_i <= 16'b0;
+	    x_1 <= 25'b0;
+	    x_2 <= 25'b0;
+		y_1 <= 25'b0;
+		y_2 <= 25'b0;
+		en_mux <= 16'b0;
+  	end 
   	
   	always @(posedge clk) begin
 	   reset_reg <= reset; 

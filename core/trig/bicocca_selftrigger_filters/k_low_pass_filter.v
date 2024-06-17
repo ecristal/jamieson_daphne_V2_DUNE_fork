@@ -26,6 +26,15 @@ module k_low_pass_filter(
 
 	wire signed [47:0] w1, w2, w3, w4, w5, w6, w7;
 
+	initial begin 
+		reset_reg <= 1'b0;
+	    enable_reg <= 1'b0;
+	    x_1 <= 48'b0;;
+		y_1 <= 48'b0;
+		in_reg <= 16'b0;
+		out_reg <= 16'b0;
+	end
+
 	always @(posedge clk) begin
 	   reset_reg <= reset;
 	   enable_reg <= enable;
@@ -33,10 +42,10 @@ module k_low_pass_filter(
 
 	always @(posedge clk) begin
 		if(reset_reg) begin
-			x_1 <= 0;
-			y_1 <= 0;
-			in_reg <= 0;
-			out_reg <= 0;
+			x_1 <= 48'b0;
+			y_1 <= 48'b0;
+			in_reg <= 16'b0;
+			out_reg <= 16'b0;
 		end else if(enable_reg) begin
 			x_1 <= w1;
 			y_1 <= w6;

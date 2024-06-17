@@ -30,7 +30,7 @@ module IIRfilter_movmean25_cfd_trigger #(parameter shift_delay = 15, threshold_d
   	//(* dont_touch = "true" *) reg signed[15:0] counter_threshold_mod, y_overshoot, threshold_ride;
   	(* dont_touch = "true" *) reg signed [2*16 - 1 : 0] y_delay_reg;
   	(* dont_touch = "true" *) reg signed [shift_delay*16 -1 : 0] y_shifted;
-  	(* dont_touch = "true" *) reg trigger_threshold, trigger_crossover, trigger_reg;
+  	(* dont_touch = "true" *) reg trigger_threshold, trigger_crossover, trigger_reg, increment_trigger_duration;
   	//(* dont_touch = "true" *) reg threshold_signal;
   	(* dont_touch = "true" *) reg [11:0] counter_crossover, counter_threshold;
 	(* dont_touch = "true" *) reg reset_reg, enable_reg;
@@ -40,6 +40,33 @@ module IIRfilter_movmean25_cfd_trigger #(parameter shift_delay = 15, threshold_d
 	wire signed [17:0] w2, w20, w8, w14, w16, mult2;
 	wire signed[47:0] w3, w5, w9, w6, w10, w11, w17, w18, w19, s_fraction_mult;
 	wire signed [15:0] y_shifted_w, s_fraction, resta_wire;
+	wire counter_crossover_signal;
+
+	initial begin 
+		reset_reg <= 1'b0;
+	    enable_reg <= 1'b0;
+	    trigger_threshold <= 1'b0;
+	    trigger_crossover <= 1'b0;
+	    trigger_reg <= 1'b0;
+	    increment_trigger_duration <= 1'b0;
+	    y_delay_reg <= 32'b0;
+	    en_mux <= 32'b0;
+	    resta <= 32'b0;
+	    x_i <= 16'b0;
+	    n1 <= {3'b000,15'b001111101000111};
+		n2 <= {3'b111,15'b100010110111100};
+	    n3 <= {3'b000,15'b001111011000101};
+		d1 <= {3'b001,15'b110100000010000};
+		d2 <= {3'b111,15'b001011000000111 + 1'b1};
+	    x_i <= 16'b0;
+        x_1 <= 25'b0;
+        x_2 <= 25'b0;
+	    y_1 <= 25'b0;
+	    y_2 <= 25'b0;
+	    threshold_reg <= $signed(256);
+	    counter_crossover <= 12'b0;
+	    counter_threshold <= 12'b0;
+	end 
 
 	always @(posedge clk) begin
 	   reset_reg <= reset;
@@ -90,17 +117,21 @@ module IIRfilter_movmean25_cfd_trigger #(parameter shift_delay = 15, threshold_d
 	// modulo trigger normal 
 
 	always @(posedge clk) begin
-	    if (reset_reg || counter_crossover[8] || counter_threshold[11]) begin
+	    if (reset_reg || counter_crossover_signal || counter_threshold[11]) begin
 			trigger_threshold <= 1'b0;
+			increment_trigger_duration <= 1'b0;
 		end else if(enable_reg) begin
 			if (($signed(en_mux) < -($signed(threshold_reg))) || trigger_threshold) begin
 			     trigger_threshold <= 1'b1;
+			     if (($signed(en_mux) < -($signed(threshold_reg<<3)))) begin 
+			     	increment_trigger_duration <= 1'b1;
+			     end
 			end
 		end
 	end
 
 	always @(posedge clk) begin
-	    if (reset_reg || counter_crossover[8]) begin
+	    if (reset_reg || counter_crossover_signal) begin
 	        counter_crossover <= 12'b0;
 		end else if(enable_reg && trigger_crossover) begin
 			counter_crossover <= counter_crossover + 1'b1;
@@ -116,7 +147,7 @@ module IIRfilter_movmean25_cfd_trigger #(parameter shift_delay = 15, threshold_d
 	end
 
 	always @(posedge clk) begin
-	    if (reset_reg || counter_crossover[8]) begin
+	    if (reset_reg || counter_crossover_signal) begin
 	        trigger_crossover <= 1'b0;
 		end else if(enable_reg && trigger_threshold && (counter_threshold >= 4)) begin
 			if (($signed(y_delay_reg[15:0]) >= $signed(16'd0)) && ($signed(y_delay_reg[31:16]) < $signed(16'd0))) begin
@@ -155,7 +186,11 @@ module IIRfilter_movmean25_cfd_trigger #(parameter shift_delay = 15, threshold_d
     //    end
     // end
 
-    /// End experimental 
+    /// End experimental
+
+  assign counter_crossover_signal = (increment_trigger_duration == 1'b0) ?   counter_crossover[6] : 
+             (increment_trigger_duration == 1'b1) ?   (counter_crossover[9] && counter_crossover[6]):
+             1'bx;
 
   assign w1 = {x_i,9'b0};
   assign w2 = n1;
