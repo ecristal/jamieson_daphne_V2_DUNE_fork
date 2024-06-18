@@ -259,6 +259,7 @@ architecture DAPHNE2_arch of DAPHNE2 is
         reset: in std_logic; -- reset sync to clka
         trig:  in std_logic; -- trigger pulse sync to clka
         dia:   in std_logic_vector(15 downto 0); -- data bus from AFE channel    
+        a_in:  in std_logic_vector(4 downto 0);
         clkb:  in  std_logic;
         addrb: in  std_logic_vector(11 downto 0);
         dob:   out std_logic_vector(15 downto 0)
@@ -290,6 +291,7 @@ architecture DAPHNE2_arch of DAPHNE2 is
         sclk100: in std_logic; -- system clock 100MHz
         reset: in std_logic; -- for sender logic and for GTP quad
         afe_dat: in array_5x9x14_type;  -- AFE data synchronized to clock
+        afe_dat_out: out array_5x9x14_type;
         timestamp: in std_logic_vector(63 downto 0);
         slot_id: in std_logic_vector(3 downto 0);
         crate_id: in std_logic_vector(9 downto 0);
@@ -362,7 +364,7 @@ architecture DAPHNE2_arch of DAPHNE2 is
     signal trig_gbe0_reg, trig_gbe1_reg, trig_gbe2_reg, trig_gbe_total: std_logic;
 
     signal afe_dout: array_5x9x14_type;
-    --signal afe_dout_filtered: array_5x9x14_type;
+    signal afe_dout_filtered: array_5x9x14_type;
     signal afe_dout_pad: array_5x9x16_type;
     signal fe_done, fe_warn: std_logic_vector(4 downto 0);
     signal spy_bufr: array_5x9x16_type;
@@ -603,7 +605,7 @@ begin
     -- pad this out to make it 5x9x16
     gen_a: for a in 4 downto 0 generate
         gen_b: for b in 8 downto 0 generate
-            afe_dout_pad(a)(b) <= "00" & afe_dout(a)(b);
+            afe_dout_pad(a)(b) <= "00" & afe_dout_filtered(a)(b);
         end generate gen_b;
     end generate gen_a;
 
@@ -685,7 +687,7 @@ begin
             reset => reset_async,
             trig  => trig_sync,
             dia   => timestamp( ((i*16)+15) downto (i*16) ),
-
+            a_in => pre_trigger_selector,
             -- oeiclk domain    
             clkb  => oeiclk,
             addrb => rx_addr(11 downto 0),
@@ -1107,11 +1109,12 @@ begin
         reset => reset_async,
 
         afe_dat => afe_dout,
+        afe_dat_out => afe_dout_filtered,
         timestamp => timestamp,
 
         outmode => outmode_reg,
         adhoc => adhoc_reg,
-        threshold => threshold_reg,
+        threshold => threshold_value(13 downto 0),
         --
         ti_trigger => ti_trigger_reg, --------------------
         ti_trigger_stbr => ti_trigger_stbr_reg, -------------------
@@ -1122,7 +1125,7 @@ begin
         version_id => daq_out_param_reg(5 downto 0), -- 6 bits
         st_enable => st_enable_reg,
         st_triggered => st_triggered,
-        filter_output_selector => filter_output_selector_reg, -- filter type selector
+        filter_output_selector => trigger_filter_output_selector_value, -- filter type selector
    
         oeiclk => oeiclk,
         trig => trig_sync,

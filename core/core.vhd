@@ -32,6 +32,7 @@ port(
     sclk100: in std_logic; -- system clock 100MHz 
     reset: in std_logic; -- for sender logic and for GTP quad
     afe_dat: in array_5x9x14_type;  -- AFE data synch to mclk
+    afe_dat_out: out array_5x9x14_type;
     timestamp: in std_logic_vector(63 downto 0); -- sync to mclk
 
     outmode: in std_logic_vector(7 downto 0); -- output link mode control
@@ -111,11 +112,12 @@ architecture core_arch of core is
         detector_id: in std_logic_vector(5 downto 0);
         version_id: in std_logic_vector(5 downto 0);
         enable: in std_logic_vector(39 downto 0);
-        ti_triggered: out std_logic_vector(39 downto 0);
+        st_triggered: out std_logic_vector(39 downto 0);
         filter_output_selector: in std_logic_vector(1 downto 0);
         aclk: in std_logic; -- AFE clock 62.500 MHz
         timestamp: in std_logic_vector(63 downto 0);
     	afe_dat: in array_5x9x14_type; -- ADC data all 40 input streams
+        afe_dat_out: out array_5x9x14_type;
         fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
         dout: out std_logic_vector(31 downto 0);
         kout: out std_logic_vector(3 downto 0)
@@ -242,6 +244,7 @@ begin
         ti_trigger => ti_trigger, ------------------------------
         ti_trigger_stbr => ti_trigger_stbr, -------------------------
     	afe_dat => afe_dat, -- AFE raw data after alignment all 40 channels
+        afe_dat_out => afe_dat_out,
         fclk => fclk(0), 
         dout => selftrig_sender_dout,
         kout => selftrig_sender_kout

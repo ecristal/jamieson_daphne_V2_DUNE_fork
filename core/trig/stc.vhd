@@ -34,6 +34,7 @@ port(
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
 	afe_dat: in std_logic_vector(13 downto 0); -- aligned AFE data
+    afe_dat_out: out std_logic_vector(13 downto 0);
     enable: in std_logic;
     
     fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
@@ -200,6 +201,7 @@ begin
         ti_trigger_stbr => ti_trigger_stbr
     );    
     st_triggered <= triggered;
+    afe_dat_out <= afe_dat_filtered;
     -- FSM waits for trigger condition then assembles output frame and stores into FIFO
 
     builder_fsm_proc: process(aclk)

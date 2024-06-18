@@ -33,7 +33,7 @@ port(
     aclk: in std_logic; -- AFE clock 62.500 MHz
     timestamp: in std_logic_vector(63 downto 0);
 	afe_dat: in array_5x9x14_type; -- ALL AFE channels feed into this module
-
+    afe_dat_out: out array_5x9x14_type;
     fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
     dout: out std_logic_vector(31 downto 0);
     kout: out std_logic_vector(3 downto 0)
@@ -74,6 +74,7 @@ architecture st40_top_arch of st40_top is
     	ti_trigger: in std_logic_vector(7 downto 0); -------------------------
         ti_trigger_stbr: in std_logic;  -------------------------
         afe_dat: in std_logic_vector(13 downto 0);
+        afe_dat_out: out std_logic_vector(13 downto 0);
         fclk: in std_logic; -- transmit clock to FELIX 120.237 MHz 
         fifo_rden: in std_logic;
         fifo_ae: out std_logic;
@@ -107,6 +108,7 @@ begin
                 aclk => aclk,
                 timestamp => timestamp,
             	afe_dat => afe_dat(a)(c),
+                afe_dat_out => afe_dat_out(a)(c),
                 fclk => fclk,
                 fifo_rden => fifo_rden(a)(c),
                 fifo_ae => fifo_ae(a)(c),
