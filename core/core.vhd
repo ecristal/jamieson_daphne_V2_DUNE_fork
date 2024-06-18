@@ -238,6 +238,7 @@ begin
         detector_id => detector_id,
         version_id => version_id,
         enable => st_enable,
+        st_triggered => st_triggered,
         filter_output_selector => filter_output_selector,
         aclk => mclk,
         timestamp => timestamp,
