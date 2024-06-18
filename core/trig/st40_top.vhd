@@ -121,7 +121,7 @@ begin
 
     gen_align_a: for a in 4 downto 0 generate
         afe_dat_out(a)(8) <= afe_dat(a)(8);
-    end generate gen_stc_a;
+    end generate gen_align_a;
 
     -- fifo read enable and fifo flag selection
 
