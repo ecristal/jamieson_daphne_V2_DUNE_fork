@@ -119,6 +119,10 @@ begin
     end generate gen_stc_c;
     end generate gen_stc_a;
 
+    gen_align_a: for a in 4 downto 0 generate
+        afe_dat_out(a)(8) <= afe_dat(a)(8);
+    end generate gen_stc_a;
+
     -- fifo read enable and fifo flag selection
 
 --    fifo_ready <= '1' when (sel_reg="000000" and fifo_ae(0)='1') else 
